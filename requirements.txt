@@ -1,0 +1,9 @@
+requests
+jsonschema
+pyyaml
+pandas
+numpy
+python-dotenv
+#nltk
+#spacy
+#gensim

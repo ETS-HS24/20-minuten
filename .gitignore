@@ -1,0 +1,6 @@
+*.env
+*.tsv
+
+#folders
+__pycache__
+.vscode
