@@ -1,5 +1,6 @@
 *.env
 *.tsv
+.idea
 
 #folders
 __pycache__
