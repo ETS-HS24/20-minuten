@@ -251,7 +251,7 @@ def test():
     sd.set_api_credentials()
     sd.get_status()
 
-    ds = SwissdoxDataset(dataset_name="2024-09-13 15:29 Test-Load-inspect dataset.yaml")
+    ds = SwissdoxDataset(dataset_name="2024-09-13 15:29 Test-Load-inspect dataset")
     ds.initialize_from_api(sd, "../data")
 
     sd.download_dataset(ds, overwrite=False)
