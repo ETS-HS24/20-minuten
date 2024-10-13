@@ -139,7 +139,7 @@ class SwissdoxAPI:
         self.headers = None
 
         self.API_BASE_URL = "https://swissdox.linguistik.uzh.ch/api"
-        self.DEFAULT_CREDENTIAL_FILE = "./swissdox-creds.env"
+        self.DEFAULT_CREDENTIAL_FILE = "../swissdox-creds.env"
 
 
     def set_api_credentials(self, key=None, secret=None):
