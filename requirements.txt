@@ -4,6 +4,7 @@ pyyaml
 pandas
 numpy
 python-dotenv
+textblob
 #nltk
 #spacy
 #gensim
