@@ -1,5 +1,6 @@
 requests
 jsonschema
+bottleneck==1.3.6
 pyyaml
 pandas
 numpy
