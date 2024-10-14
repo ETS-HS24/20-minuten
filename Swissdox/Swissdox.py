@@ -244,17 +244,17 @@ def test():
 
     sys.excepthook = excepthook
 
-    #sd.load_query_file("2024-09-13 15:29 Test-Load-inspect dataset copy.yaml")
-    #print(sd.get_download_url_from_query_name("2024-09-13 15:29 Test-Load-inspect dataset"))
+    #sd.load_query_file("20min-test-query-2020-jan-jun copy.yaml")
+    #print(sd.get_download_url_from_query_name("20min-test-query-2020-jan-jun"))
     #sd.get_status()
     sd = SwissdoxAPI()
     sd.set_api_credentials()
     sd.get_status()
 
-    ds = SwissdoxDataset(dataset_name="2024-09-13 15:29 Test-Load-inspect dataset")
+    ds = SwissdoxDataset(dataset_name="20min-test-query-2020-jan-jun")
     ds.initialize_from_api(sd, "../data")
 
-    sd.download_dataset(ds, overwrite=False)
+    sd.download_dataset(ds, overwrite=True)
     #sd.get_status()
     #ds.initialize_from_api(sd, "../data")
     #ds.initialize_dataset("../data")
