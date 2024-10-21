@@ -73,4 +73,4 @@ if __name__ == '__main__':
     ]
 
     # Run topic modeling
-    lda_model, corpus, dictionary = topic_modeling(articles, num_topics=3, num_words=5)
+    lda_model, corpus, dictionary = topic_modeling(articles, num_topics=5, num_words=1)
