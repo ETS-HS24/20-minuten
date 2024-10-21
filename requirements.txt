@@ -13,6 +13,6 @@ tf-keras
 tqdm
 germansentiment
 tiktoken
-#nltk
-#spacy
-#gensim
+nltk
+spacy
+gensim
