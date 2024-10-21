@@ -5,6 +5,14 @@ pyyaml
 pandas
 numpy
 python-dotenv
+textblob
+transformers
+pyarrow
+tensorflow
+tf-keras
+tqdm
+germansentiment
+tiktoken
 #nltk
 #spacy
 #gensim

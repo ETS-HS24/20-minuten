@@ -5,3 +5,6 @@
 #folders
 __pycache__
 .vscode
+.idea
+swissdox-creds.env
+data
