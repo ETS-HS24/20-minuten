@@ -13,6 +13,20 @@ tf-keras
 tqdm
 germansentiment
 tiktoken
+<<<<<<< Updated upstream
 nltk
 spacy
 gensim
+=======
+# text analysis
+lxml
+beautifulsoup4
+seaborn
+# exporting ipynb
+notebook
+jupyter-client<8
+pyzmq
+#nltk
+#spacy
+#gensim
+>>>>>>> Stashed changes
