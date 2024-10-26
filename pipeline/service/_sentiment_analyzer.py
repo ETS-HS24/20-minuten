@@ -55,7 +55,7 @@ class SentimentService:
                 inputs = french_tokenizer(content, truncation=True, max_length=512, return_tensors="pt")
                 result = french_pipeline(content[:512])[0]  # Pass the truncated content directly
                 label = result['label']
-                score = result['score']
+                score = round(result['score'], 3)
 
                 # Map the labels to negative/neutral/positive
                 if label == 'LABEL_0':
@@ -65,10 +65,16 @@ class SentimentService:
                 else:
                     sentiment = 'neutral'
             else:
-                sentiment = german_model.predict_sentiment([content])[0]
+                prediction = german_model.predict_sentiment([content], output_probabilities=True)
+                sentiment = prediction[0][0]
+                score = round(float([prediction_score for prediction_score in prediction[1][0] if prediction_score[0] == sentiment][0][1]), 3)
 
-            return sentiment
+            return sentiment, score
 
         tqdm.pandas()
         # pass content and language to the function
-        return data_frame.assign(sentiment=data_frame.progress_apply(lambda x: process_content(x['content'], x['language']), axis=1))
+        data_frame[['sentiment', 'score']] = data_frame.progress_apply(
+            lambda x: pd.Series(process_content(x['content'], x['language'])), axis=1)
+
+        data_frame['sentiment'] = data_frame['sentiment'].astype(str)
+        return data_frame
