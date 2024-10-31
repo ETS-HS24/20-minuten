@@ -1,6 +1,9 @@
 from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 
+# pip install sentence-transformers
+
+
 class TopicMatcherService:
 
     @staticmethod
