@@ -2,7 +2,7 @@ import glob
 import os
 import pandas as pd
 from pathlib import Path
-from pipeline.service import FileService, SentimentService, TextService, TopicModellingService
+from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
 
 if __name__ == "__main__":
 
@@ -51,7 +51,6 @@ if __name__ == "__main__":
     TopicModellingService.to_csv(df_print, "data/topics/topics_fr")
 
     df_topics_fr = pd.read_csv("data/topics/topics_fr.csv")
-    print(df_topics_fr)
 
     # German
     df_de = df[df['language'] == 'de']['content'].iloc[:number_of_articles].reset_index()
@@ -63,4 +62,8 @@ if __name__ == "__main__":
     TopicModellingService.to_csv(df_print, "data/topics/topics_de")
 
     df_topics_de = pd.read_csv("data/topics/topics_de.csv")
-    print(df_topics_de)
+
+    # Matching topics German / French
+    hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], print_matches=True)
+
+    # print(hit_list)

@@ -4,8 +4,10 @@ import pandas as pd
 class TopicMatcherService:
 
     @staticmethod
-    def match(corpus, queries, number_of_top=5):
+    def match(corpus, queries, number_of_top=5, print_matches=True):
         model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cpu', cache_folder='/')
+
+        hit_list = []
 
         corpus_embedding = model.encode(corpus, convert_to_tensor=True, normalize_embeddings=True)
 
@@ -15,12 +17,16 @@ class TopicMatcherService:
             query_embedding = model.encode(query, convert_to_tensor=True, normalize_embeddings=True)
             hits = util.semantic_search(query_embedding, corpus_embedding, score_function=util.dot_score)
             hits = hits[0]
+            hit_list.append(hits)
 
-            print()
-            print("Query:", query)
-            print("---------------------------")
-            for hit in hits[:top_k]:
-                print(f"{round(hit['score'], 3)} | {corpus[hit['corpus_id']]}")
+            if print_matches:
+                print()
+                print("Query:", query)
+                print("---------------------------")
+                for hit in hits[:top_k]:
+                    print(f"{round(hit['score'], 3)} | {corpus[hit['corpus_id']]}")
+
+        return hit_list, corpus_embedding, top_k
 
 
 if __name__ == '__main__':
