@@ -1,18 +1,14 @@
 requests
 jsonschema
-bottleneck==1.3.6
 pyyaml
 pandas
-numpy
+numpy<2
 python-dotenv
 textblob
 transformers
 pyarrow
-tensorflow
-tf-keras
 tqdm
 germansentiment
-tiktoken
 # text analysis
 lxml
 beautifulsoup4
@@ -23,4 +19,10 @@ jupyter-client<8
 pyzmq
 nltk
 spacy
+# gensim issues because it is not yet upgraded to np=<2
+thinc<9
+blis<=1.0.0
 gensim
+
+# Fehlende packages topic modeling?
+sentence-transformers
