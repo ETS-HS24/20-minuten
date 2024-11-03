@@ -41,31 +41,30 @@ if __name__ == "__main__":
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
 
-    df = sentiment_df
     ############# Topic Modelling #############
     number_of_articles = 10
 
     # French
-    df_fr = df[df['language'] == 'fr']['content'].iloc[:number_of_articles].reset_index()
+    df_fr = sentiment_df[sentiment_df['language'] == 'fr']['content'].iloc[:number_of_articles].reset_index()
     df_list = []
     for index, row in df_fr.iterrows():
-        topic_df_fr, lda_model_fr, corpus_fr, dictionary_fr = TopicModellingService.topic_modeling(row, 'french', num_topics=5, num_words=5, print_topics=False, export_to_csv=False)
+        topic_df_fr, lda_model_fr, corpus_fr, dictionary_fr = TopicModellingService.topic_modeling(row, 'french', num_topics=10, num_words=5, print_topics=False)
         df_list.append(topic_df_fr)
     df_print = pd.concat(df_list, axis=0)
-    TopicModellingService.to_csv(df_print, "data/topics/topics_fr")
+    FileService.df_to_csv(df=df_print, file_name="topics_fr")
 
-    df_topics_fr = pd.read_csv("data/topics/topics_fr.csv")
+    df_topics_fr = topic_df_fr
 
     # German
-    df_de = df[df['language'] == 'de']['content'].iloc[:number_of_articles].reset_index()
+    df_de = sentiment_df[sentiment_df['language'] == 'de']['content'].iloc[:number_of_articles].reset_index()
     df_list = []
     for index, row in df_de.iterrows():
-        topic_df_de, lda_model_de, corpus_de, dictionary_de = TopicModellingService.topic_modeling(row, 'german', num_topics=5, num_words=5, print_topics=False, export_to_csv=False)
+        topic_df_de, lda_model_de, corpus_de, dictionary_de = TopicModellingService.topic_modeling(row, 'german', num_topics=10, num_words=5, print_topics=False)
         df_list.append(topic_df_de)
     df_print = pd.concat(df_list, axis=0)
-    TopicModellingService.to_csv(df_print, "data/topics/topics_de")
+    FileService.df_to_csv(df=df_print, file_name="topics_de")
 
-    df_topics_de = pd.read_csv("data/topics/topics_de.csv")
+    df_topics_de = topic_df_de
 
     # Matching topics German / French
     hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], print_matches=True)

@@ -54,7 +54,16 @@ class FileService:
         return f'{output_dir}/{file_name}.parquet'
     
     @staticmethod
-    def read_parquet_to_df(file_name: str, file_dir: str = 'data/processed') -> pd.DataFrame:
+    def df_to_csv(df: pd.DataFrame, file_name: str, output_dir: str = default_processed_path) -> None:
+        file_path = FileService.get_csv_path(file_name=file_name, output_dir=output_dir)
+        Path(output_dir).mkdir(parents=True, exist_ok=True)
+        df.to_csv(file_path)
+
+    @staticmethod
+    def get_csv_path(file_name: str, output_dir: str = default_processed_path) -> str:
+        return f'{output_dir}/{file_name}.csv'
+
+    @staticmethod
     def read_parquet_to_df(file_name: str, file_dir: str = default_processed_path) -> pd.DataFrame:
         file_path = f'{file_dir}/{file_name}.parquet'
         return pd.read_parquet(file_path)

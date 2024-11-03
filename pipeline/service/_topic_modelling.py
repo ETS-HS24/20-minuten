@@ -1,18 +1,35 @@
+import pandas as pd
+import logging
 import nltk
 import spacy
-import pandas as pd
+from spacy.cli.download import download as spacy_download
 from gensim import corpora
 from gensim.models import LdaModel
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 
+
 # Download NLTK data
-nltk.download('stopwords')
-nltk.download('wordnet')
+for nltk_data in ["stopwords", "wordnet"]:
+    try: 
+        nltk.data.find(nltk_data)
+    except LookupError:
+        logging.info(f"NLTK data {nltk_data} not found... downloading it.")
+        nltk.download(nltk_data)
 
 # Initialize spacy model and lemmatizer
-nlp_fr = spacy.load('fr_core_news_sm')
-nlp_de = spacy.load('de_core_news_sm')
+try: 
+    nlp_fr = spacy.load('fr_core_news_sm')
+except OSError: 
+    spacy_download('fr_core_news_sm')
+    nlp_fr = spacy.load('fr_core_news_sm')
+
+try: 
+    nlp_de = spacy.load('de_core_news_sm')
+except OSError: 
+    spacy_download('de_core_news_sm')
+    nlp_de = spacy.load('de_core_news_sm')
+    
 lemmatizer = WordNetLemmatizer()
 
 # Run this before in your cmd line:
@@ -39,7 +56,13 @@ class TopicModellingService:
         return processed_texts
 
     @staticmethod
-    def topic_modeling(texts, language, num_topics=5, num_words=10, print_topics=False, export_to_csv=False, filepath="data/topics", filename="topics"):
+    def topic_modeling(
+        texts, 
+        language, 
+        num_topics=5, 
+        num_words=10,
+        print_topics=False, 
+        ):
         # print('-----')
         # print(f'Language: {language}')
         # print(f'Length of texts: {len(texts)} {texts}')
@@ -64,11 +87,6 @@ class TopicModellingService:
             # print('Print topics')
             TopicModellingService.print_topics(lda_model, num_topics, num_words)
 
-        # Export to csv
-        if export_to_csv:
-            # print('Export topics to csv')
-            TopicModellingService.to_csv(df, filepath + filename + "_" + language)
-
         return df, lda_model, corpus, dictionary
 
     @staticmethod
@@ -86,11 +104,6 @@ class TopicModellingService:
 
         return pd.DataFrame(top_words_per_topic, columns=columns)
 
-    @staticmethod
-    def to_csv(df, filename):
-        return df.to_csv(filename + ".csv", encoding='utf-8-sig')
-
-
 if __name__ == '__main__':
     articles_fr = [
         "L'économie fait face à des défis importants en raison de l'inflation et du chômage.",
@@ -101,7 +114,13 @@ if __name__ == '__main__':
     ]
 
     # Run topic modeling for french
-    df_fr, lda_model_fr, corpus_fr, dictionary_fr = TopicModellingService.topic_modeling(articles_fr, 'french', num_topics=5, num_words=5, print_topics=True, export_to_csv=True, filepath="../../data/topics/", filename="articles")
+    df_fr, lda_model_fr, corpus_fr, dictionary_fr = TopicModellingService.topic_modeling(
+        articles_fr, 
+        'french', 
+        num_topics=5, 
+        num_words=5, 
+        print_topics=True)
+    
     print(df_fr)
 
     print()
@@ -117,5 +136,11 @@ if __name__ == '__main__':
     ]
 
     # Run topic modeling for german
-    df_de, lda_model_de, corpus_de, dictionary_de = TopicModellingService.topic_modeling(articles_de, 'german', num_topics=5, num_words=5, print_topics=True, export_to_csv=True, filepath="../../data/topics/", filename="articles")
+    df_de, lda_model_de, corpus_de, dictionary_de = TopicModellingService.topic_modeling(
+        articles_de, 
+        'german', 
+        num_topics=5, 
+        num_words=5, 
+        print_topics=True)
+    
     print(df_de)
