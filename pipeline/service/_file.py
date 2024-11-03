@@ -41,8 +41,12 @@ class FileService:
 
     @staticmethod
     def df_to_parquet(df: pd.DataFrame, file_name: str, output_dir: str = 'data/processed') -> None:
-        file_path = f'{output_dir}/{file_name}.parquet'
+        file_path = FileService.get_parquet_path(file_name=file_name, output_dir=output_dir)
         df.to_parquet(file_path)
+
+    @staticmethod
+    def get_parquet_path(file_name: str, output_dir: str = 'data/processed') -> str:
+        return f'{output_dir}/{file_name}.parquet'
 
     @staticmethod
     def read_parquet_to_df(file_name: str, file_dir: str = 'data/processed') -> pd.DataFrame:
