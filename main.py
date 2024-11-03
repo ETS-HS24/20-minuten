@@ -1,25 +1,31 @@
 import glob
 import os
 import pandas as pd
+import logging
 from pathlib import Path
 from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
 
 if __name__ == "__main__":
+    
+    force_recreate = False
 
-    file = Path("data/processed/df.csv")
+    ######## Read File #########
+    search_pattern = os.path.join('data', "**", "raw-data", "*.tsv")
 
-    if not file.exists():
+    matching_files = glob.glob(search_pattern, recursive=True)
+    file_path = matching_files[0]
 
-        ######## Read FIle #########
-        search_pattern = os.path.join('data', "**", "raw-data", "*.tsv")
 
-        mathing_files = glob.glob(search_pattern, recursive=True)
-        file_path = mathing_files[0]
-
+    if not Path(FileService.get_parquet_path(file_name='articles_raw')).exists() or force_recreate: 
+        logging.info(f"Recreating raw parquet.")
         articles_df = FileService.read_tsv_to_df(file_path)
-        FileService.df_to_parquet(articles_df, 'articles_raw')
+        FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
+    else:
+        logging.info(f"Not recreating raw transform")
+        articles_df = FileService.read_parquet_to_df(file_name='articles_raw')
 
-
+    if not Path(FileService.get_parquet_path(file_name='articles_sentiment')).exists() or force_recreate: 
+        logging.info(f"Recreating sentiment analysis")
         ######### Pre-process Data #########
         cleaned_articles_df = TextService.dop_columns(df=articles_df, columns_to_drop=["rubric", "regional", "subhead"])
         cleaned_articles_df = TextService.process_tags(df=cleaned_articles_df)
@@ -30,14 +36,12 @@ if __name__ == "__main__":
         sentiment_df = SentimentService.sentimental_analysis(cleaned_articles_df)
         # Save the DataFrame as a parquet file
         FileService.df_to_parquet(sentiment_df, 'articles_sentiment')
+    else:
+        logging.info("Not recreating sentiment analysis")
+        sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
-        sentiment_df = FileService.read_parquet_to_df('articles_sentiment')
 
-        # Save dataframe as csv
-        sentiment_df.to_csv(file, encoding='utf-8-sig')
-
-    df = pd.read_csv(file)
-
+    df = sentiment_df
     ############# Topic Modelling #############
     number_of_articles = 10
 
