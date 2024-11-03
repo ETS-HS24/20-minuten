@@ -1,14 +1,22 @@
 from sentence_transformers import SentenceTransformer, util
 import pandas as pd
-
-# pip install sentence-transformers
+import logging
+import torch
 
 
 class TopicMatcherService:
 
     @staticmethod
     def match(corpus, queries, number_of_top=5, print_matches=True):
-        model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device='cpu', cache_folder='/')
+
+        if torch.cuda.is_available():
+            logging.info(f"GPU is available, setting mode to 'cuda'.")
+            mode = 'cuda'
+        else:
+            logging.warning(f"GPU NOT available, setting mode to 'cpu'.")
+            mode = 'cpu'
+
+        model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=mode)
 
         hit_list = []
 
