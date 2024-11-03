@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 import torch
 
+logger = logging.getLogger(__name__)
 
 class TopicMatcherService:
 
@@ -10,10 +11,10 @@ class TopicMatcherService:
     def match(corpus, queries, number_of_top=5, print_matches=True):
 
         if torch.cuda.is_available():
-            logging.info(f"GPU is available, setting mode to 'cuda'.")
+            logger.info(f"GPU is available, setting mode to 'cuda'.")
             mode = 'cuda'
         else:
-            logging.warning(f"GPU NOT available, setting mode to 'cpu'.")
+            logger.warning(f"GPU NOT available, setting mode to 'cpu'.")
             mode = 'cpu'
 
         model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=mode)

@@ -7,14 +7,19 @@ from gensim import corpora
 from gensim.models import LdaModel
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from pathlib import Path
+import os
+import datetime 
+import glob
 
+logger = logging.getLogger(__name__)
 
 # Download NLTK data
 for nltk_data in ["stopwords", "wordnet"]:
     try: 
         nltk.data.find(nltk_data)
     except LookupError:
-        logging.info(f"NLTK data {nltk_data} not found... downloading it.")
+        logger.info(f"NLTK data {nltk_data} not found... downloading it.")
         nltk.download(nltk_data)
 
 # Initialize spacy model and lemmatizer
@@ -38,10 +43,13 @@ lemmatizer = WordNetLemmatizer()
 # python -m spacy download de_core_news_sm
 
 class TopicModellingService:
+    default_model_path:str = './models'
+
     @staticmethod
     def preprocess(texts, language='german'):
         stop_words = set(stopwords.words(language))
         processed_texts = []
+        logger.info(f"Preprocessing {len(texts)} texts for topic modelling.")
         for doc in texts:
             # Tokenize the document
             nlp = nlp_de if language == 'german' else nlp_fr
@@ -56,91 +64,80 @@ class TopicModellingService:
         return processed_texts
 
     @staticmethod
-    def topic_modeling(
-        texts, 
-        language, 
-        num_topics=5, 
-        num_words=10,
-        print_topics=False, 
+    def fit_lda(
+        texts,
+        language,
+        num_topics=5,
+        dataset_passes=5
         ):
-        # print('-----')
-        # print(f'Language: {language}')
-        # print(f'Length of texts: {len(texts)} {texts}')
-
-        # Preprocess the texts
         processed_texts = TopicModellingService.preprocess(texts, language)
 
-        # Create a dictionary representation of the documents
+        logger.info(f"Fitting LDA for {language}.")
         dictionary = corpora.Dictionary(processed_texts)
+        logger.info(f"Created dictionary with {len(dictionary)} entries.")
 
-        # Create a corpus: Term Document Frequency (Bag of Words model)
         corpus = [dictionary.doc2bow(text) for text in processed_texts]
+        logger.info(f"Applying TFIDF to create a corpus, why?")
 
-        # Build the LDA model
-        lda_model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=15)
+        logger.info(f"Fit online LDA with {dataset_passes}")
+        lda_model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
 
-        # Create dataframe
-        df = TopicModellingService.get_dataframe(lda_model, num_topics, num_words)
-
-        # Print topics
-        if print_topics:
-            # print('Print topics')
-            TopicModellingService.print_topics(lda_model, num_topics, num_words)
-
-        return df, lda_model, corpus, dictionary
+        return lda_model, corpus, dictionary
+    
 
     @staticmethod
-    def print_topics(lda_model, num_topics=5, num_words=10):
-        # Print the topics
-        topics = lda_model.print_topics(num_topics=num_topics, num_words=num_words)
-        for idx, topic in topics:
-            print(f"Topic {idx + 1}: {topic}")
+    def save_gensim_model(
+        model:LdaModel, 
+        language:str|None=None, 
+        model_name:str|None=None, 
+        model_folder:str=default_model_path
+        ) -> str:
+
+        save_dir = Path(model_folder)
+        save_dir.mkdir(parents=True, exist_ok=True)
+
+        if not model_name:
+            assert language, "Specify either model_name or language..."
+            logger.info("No model_name defined, creating timestamped.")
+
+            now = datetime.datetime.now()
+            timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
+            model_name = f"lda-model-{language}-{timestamp}"
+
+        model_path = os.path.join(model_folder, model_name)
+        
+        Path(model_path).mkdir(parents=True, exist_ok=True)
+        
+        model.save(os.path.join(model_path, "model"))
+        logger.info(f"Saved model to {model_path}")
+
+        return model_path
 
     @staticmethod
-    def get_dataframe(lda, num_topics=5, num_words=10, columns=['Topic', 'Word', 'Score']):
+    def load_gensim_model(
+        language:str|None=None, 
+        full_model_path:str|None=None, 
+        default_model_folder:str|None=default_model_path
+        ) -> LdaModel:
+
+        if not full_model_path:
+            assert language, f"If full_model_path is not set you must set the language."
+            assert default_model_folder, f"If full_model_path is not set you must set the default_model_folder"
+
+            all_models = glob.glob(os.path.join(default_model_folder, f"lda-model-{language}-*"), recursive=True)
+            logger.info(f"Found {len(all_models)} models for {language}. Loading most recent one.")
+            full_model_path = all_models[-1]
+
+        assert not full_model_path.endswith("model"), "Provide the path to the folder, don't append 'model'."
+
+        return LdaModel.load(os.path.join(full_model_path, "model"))
+
+    @staticmethod
+    def lda_top_words_per_topic(model, n_top_words):
         top_words_per_topic = []
-        for t in range(lda.num_topics):
-            top_words_per_topic.extend([(t,) + x for x in lda.show_topic(t, topn=num_topics)])
-
-        return pd.DataFrame(top_words_per_topic, columns=columns)
+        for topic_id in range(model.num_topics):
+            top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])
+        return pd.DataFrame(top_words_per_topic, columns=["Topic", "Word", "Probability"])
 
 if __name__ == '__main__':
-    articles_fr = [
-        "L'économie fait face à des défis importants en raison de l'inflation et du chômage.",
-        "Les tensions politiques augmentent alors que les gouvernements luttent pour contrôler la pandémie.",
-        "Les entreprises technologiques connaissent une croissance significative sur le marché boursier.",
-        "Les équipes sportives s'adaptent à de nouvelles protocoles en raison de la crise sanitaire mondiale.",
-        "Les préoccupations environnementales entraînent une augmentation des projets d'énergies renouvelables."
-    ]
-
-    # Run topic modeling for french
-    df_fr, lda_model_fr, corpus_fr, dictionary_fr = TopicModellingService.topic_modeling(
-        articles_fr, 
-        'french', 
-        num_topics=5, 
-        num_words=5, 
-        print_topics=True)
-    
-    print(df_fr)
-
-    print()
-    print('---')
-    print()
-
-    articles_de = [
-        "Hunderte protestierten auf dem Bundesplatz gegen die zweite Entlassungswelle im Stahlwerk Gerlafingen. Die Zukunft der Arbeiter und ihrer Familien steht auf dem Spiel.",
-        "Die Schweizer Tennishoffnung Dominic Stricker spricht vor dem Heimturnier in Basel über ihre Leidenszeit, ihren Höhenflug in Stockholm und ihren Fitnesszustand.",
-        "In einer Asylunterkunft ist es zu einem Streit zwischen zwei Männern gekommen. Dabei wurde einer von ihnen durch mehrere Messerstiche lebensbedrohlich verletzt.",
-        "Auch zwischen den Sessionen werden in Bundesbern wichtige Entscheide getroffen. Hier halten wir dich auf dem Laufenden.",
-        "In Saint-Malo in der Bretagne kam es zu eindrücklichen Springtiden. Das Phänomen, das auch als Springflut bekannt ist, führt zu riesigen Wellen. Obwohl die Behörden zur Vorsicht mahnten, begaben sich Schaulustige in Gefahr."
-    ]
-
-    # Run topic modeling for german
-    df_de, lda_model_de, corpus_de, dictionary_de = TopicModellingService.topic_modeling(
-        articles_de, 
-        'german', 
-        num_topics=5, 
-        num_words=5, 
-        print_topics=True)
-    
-    print(df_de)
+    pass
