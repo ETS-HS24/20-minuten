@@ -1,5 +1,7 @@
 import pandas as pd
 from bs4 import BeautifulSoup
+from typing import List
+import re
 
 
 class TextService:
@@ -17,7 +19,7 @@ class TextService:
         return df
 
     @staticmethod
-    def get_authors(article: str):
+    def get_authors(article: str) -> List[str]|None:
         soup = BeautifulSoup(article, 'html.parser')
         if soup.p:
             last_p = soup.find_all("p")[-1].text
@@ -39,30 +41,49 @@ class TextService:
                 return None
         else:
             return None
+        
+    @staticmethod
+    def remove_author_from_string_end(article: str, n_characters: int = 10) -> str:
+        if len(article) <= n_characters:
+            return article
+        
+        last_n_chars = article[n_characters:]
+        cleaned = re.sub(r'\(.*?\)|', '', last_n_chars)
+        return article[:n_characters] + cleaned
+
 
     @staticmethod
     def process_tags(df: pd.DataFrame) -> pd.DataFrame:
         # Extract and remove lead text
-        df['lead_text'] = df['content'].str.extract(r'<ld>(.*?)</ld>', expand=False).str.replace(r'</?p[^>]*>', '',
+        df['lead_text'] = df['content'].str.extract(r'<ld>(.*?)</ld>', expand=False).str.replace(r'</?p[^>]*>', ' ',
                                                                                                  regex=True)
-        df['content'] = df['content'].str.replace(r'<ld>.*?</ld>', '', regex=True)
+        df['content'] = df['content'].str.replace(r'<ld>.*?</ld>', ' ', regex=True)
 
         # Extract and remove subheadings
         df['subheadings'] = df['content'].str.extract(r'<zt>(.*?)</zt>', expand=False)
-        df['content'] = df['content'].str.replace(r'<zt>.*?</zt>', '', regex=True)
+        df['content'] = df['content'].str.replace(r'<zt>.*?</zt>', ' ', regex=True)
 
         # Extract and remove author full name
         df['author'] = df['content'].str.extract(r'<au>(.*?)</au>', expand=False)
-        df['content'] = df['content'].str.replace(r'<au>.*?</au>', '', regex=True)
+        df['content'] = df['content'].str.replace(r'<au>.*?</au>', ' ', regex=True)
 
         # Remove tags but keep annotated text within <a> tags
         df['content'] = df['content'].str.replace(r'<a[^>]*>(.*?)</a>', r'\1', regex=True)
 
         # Remove <tx>, <p>, <br>, <ka>, and <lg> tags
-        df['content'] = df['content'].str.replace(r'</?(tx|p|br|ka|lg)[^>]*>', '', regex=True)
+        df['content'] = df['content'].str.replace(r'</?(tx|p|br|ka|lg)[^>]*>', ' ', regex=True)
 
         # Extract authors from the last <p> element if it matches the criteria
         df['author_extracted'] = df['content'].apply(TextService.get_authors)
-        df['content'] = df['content'].str.replace(r'<p>.*?</p>$', '', regex=True)
+
+        # Remove the author from the text
+        df['content'] = df['content'].apply(TextService.remove_author_from_string_end)
+
+        # Remove all p tags
+        df['content'] = df['content'].str.replace(r'<p>.*?</p>$', ' ', regex=True)
+
+        # Remove all double spaces
+        df['content'] = df['content'].str.replace(r'\s+', ' ', regex=True)
+
 
         return df
