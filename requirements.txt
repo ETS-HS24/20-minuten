@@ -24,7 +24,7 @@ thinc<9
 blis<=1.0.0
 gensim
 
-# Fehlende packages topic modeling?
+torch
 sentence-transformers
 
 regex

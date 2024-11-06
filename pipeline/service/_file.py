@@ -5,8 +5,7 @@ from pipeline.models import Article
 
 
 class FileService:
-
-    default_processed_path:str = './data/processed'
+    default_processed_path: str = './data/processed'
 
     @staticmethod
     def read_tsv_to_articles(file_path):
@@ -48,11 +47,10 @@ class FileService:
         Path(output_dir).mkdir(parents=True, exist_ok=True)
         df.to_parquet(file_path)
 
-
     @staticmethod
     def get_parquet_path(file_name: str, output_dir: str = default_processed_path) -> str:
         return f'{output_dir}/{file_name}.parquet'
-    
+
     @staticmethod
     def df_to_csv(df: pd.DataFrame, file_name: str, output_dir: str = default_processed_path) -> None:
         file_path = FileService.get_csv_path(file_name=file_name, output_dir=output_dir)
@@ -67,8 +65,8 @@ class FileService:
     def read_parquet_to_df(file_name: str, file_dir: str = default_processed_path) -> pd.DataFrame:
         file_path = f'{file_dir}/{file_name}.parquet'
         return pd.read_parquet(file_path)
-    
+
     @staticmethod
-    def read_csv_to_df(file_name: str, file_dir: str = default_processed_path, sep:str = ",") -> pd.DataFrame:
+    def read_csv_to_df(file_name: str, file_dir: str = default_processed_path, sep: str = ",") -> pd.DataFrame:
         file_path = f'{file_dir}/{file_name}.csv'
         return pd.read_csv(file_path, sep=sep)

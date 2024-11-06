@@ -1,7 +1,6 @@
 import glob
 import os
 import sys
-import pandas as pd
 import logging
 from pathlib import Path
 from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
@@ -35,7 +34,7 @@ if __name__ == "__main__":
         FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
         _previous_step_recreate = True
     else:
-        logger.info(f"Not recreating raw transform")
+        logger.info(f"Not recreating raw transform.")
         articles_df = FileService.read_parquet_to_df(file_name='articles_raw')
 
     if (
@@ -60,7 +59,7 @@ if __name__ == "__main__":
         or force_recreate
         or _previous_step_recreate
         ): 
-        logger.info(f"Recreating sentiment analysis")
+        logger.info(f"Recreating sentiment analysis.")
         ############# Sentiment Analysis ############
         # Add sentiment to each article
         sentiment_df = SentimentService.sentimental_analysis(cleaned_articles_df)
@@ -68,43 +67,45 @@ if __name__ == "__main__":
         FileService.df_to_parquet(sentiment_df, 'articles_sentiment')
         _previous_step_recreate = True
     else:
-        logger.info("Not recreating sentiment analysis")
+        logger.info("Not recreating sentiment analysis.")
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
-    sys.exit()
+    #sys.exit()
     ############# Topic Modelling #############
-    number_of_articles = 15
-    number_of_topics = 5
+    number_of_articles = 1000
+    number_of_topics = 100
+    number_of_top_words = 10
     ds_passes = 2
 
     # French
     french_series = sentiment_df[sentiment_df['language'] == 'fr'].iloc[:number_of_articles]['content']
     #french_series = sentiment_df[sentiment_df['language'] == 'fr']['content']
     french_model, _, _ = TopicModellingService.fit_lda(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes)
-    french_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=french_model, n_top_words=10)
-    model_path = TopicModellingService.save_gensim_model(model=french_model, language="french")
-    model1 = TopicModellingService.load_gensim_model(language="french")
-    model2 = TopicModellingService.load_gensim_model(full_model_path=model_path)
+    french_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=french_model, n_top_words=number_of_top_words)
+    #model_path = TopicModellingService.save_gensim_model(model=french_model, language="french")
+    #model1 = TopicModellingService.load_gensim_model(language="french")
+    #model2 = TopicModellingService.load_gensim_model(full_model_path=model_path)
 
     FileService.df_to_csv(df=french_top_words_per_topic, file_name="topics_fr")
 
     df_topics_fr = french_top_words_per_topic
+    print(df_topics_fr)
 
     # German
-    #german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
-    german_series = sentiment_df[sentiment_df['language'] == 'de']['content']
+    german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
+    #german_series = sentiment_df[sentiment_df['language'] == 'de']['content']
     german_model, _, _ = TopicModellingService.fit_lda(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes)
-    german_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=german_model, n_top_words=10)
-    model_path = TopicModellingService.save_gensim_model(model=german_model, language="german")
+    german_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=german_model, n_top_words=number_of_top_words)
+    #model_path = TopicModellingService.save_gensim_model(model=german_model, language="german")
 
     FileService.df_to_csv(df=german_top_words_per_topic, file_name="topics_de")
 
-
     df_topics_de = german_top_words_per_topic
+    print(df_topics_de)
 
     # Matching topics German / French
-    hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], print_matches=False)
-
+    best_matches, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True)
+    print(best_matches.drop_duplicates())
     # print(hit_list)
     # print(corpus_embedding)
     # print(top_k)
