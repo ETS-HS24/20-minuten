@@ -2,12 +2,13 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List
 import re
+import unicodedata
 
 
 class TextService:
 
     @staticmethod
-    def dop_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
+    def drop_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
         return df.drop(columns_to_drop, axis=1)
 
     @staticmethod
@@ -85,5 +86,13 @@ class TextService:
         # Remove all double spaces
         df['content'] = df['content'].str.replace(r'\s+', ' ', regex=True)
 
+        # Remove non printable control characters
+        df['content'] = df['content'].apply(lambda row: ''.join(char for char in row if not unicodedata.category(char).startswith("C")))
+
+        # Remove characters from text
+        df['content'] = df['content'].str.replace(r'[«»]', '', regex=True)
+
+        # Replace characters with empty string 
+        df['content'] = df['content'].str.replace(r'[-/|#]', ' ', regex=True)
 
         return df

@@ -26,3 +26,5 @@ gensim
 
 # Fehlende packages topic modeling?
 sentence-transformers
+
+regex

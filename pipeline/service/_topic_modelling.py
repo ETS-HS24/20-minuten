@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 for nltk_data in ["stopwords", "wordnet"]:
     try: 
         nltk.data.find(nltk_data)
+        logger.info(f"NLTK data {nltk_data} found localy, not downloading.")
     except LookupError:
         logger.info(f"NLTK data {nltk_data} not found... downloading it.")
         nltk.download(nltk_data)
@@ -44,15 +45,15 @@ lemmatizer = WordNetLemmatizer()
 
 class TopicModellingService:
     default_model_path:str = './models'
-
+    
     @staticmethod
     def preprocess(texts, language='german'):
-        stop_words = set(stopwords.words(language))
+        stop_words = set(stopwords.words(language)) # | custom_german_stopwords
         processed_texts = []
         logger.info(f"Preprocessing {len(texts)} texts for topic modelling.")
+        nlp = nlp_de if language == 'german' else nlp_fr
         for doc in texts:
             # Tokenize the document
-            nlp = nlp_de if language == 'german' else nlp_fr
             doc = nlp(str(doc).lower())  # Lowercase and tokenize
             tokens = [token.text for token in doc if not token.is_stop and not token.is_punct]
 
@@ -102,7 +103,7 @@ class TopicModellingService:
 
             now = datetime.datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
-            model_name = f"lda-model-{language}-{timestamp}"
+            model_name = f"lda-model-{language}-{timestamp}-{model.num_topics}topics-{len(model.id2word)}dictsize"
 
         model_path = os.path.join(model_folder, model_name)
         
