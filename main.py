@@ -19,8 +19,11 @@ if __name__ == "__main__":
     search_pattern = os.path.join('data', "**", "raw-data", "*.tsv")
 
     matching_files = glob.glob(search_pattern, recursive=True)
-    file_path = matching_files[0]
 
+    if matching_files:
+        file_path = matching_files[0]
+    else:
+        file_path = FileService.default_processed_path
 
     if (
         not Path(FileService.get_parquet_path(file_name='articles_raw')).exists() 
