@@ -5,7 +5,9 @@
 #folders
 __pycache__
 .vscode
+.devcontainer
 .idea
 swissdox-creds.env
 data
 models
+papers
