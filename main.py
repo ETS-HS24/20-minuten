@@ -124,9 +124,9 @@ if __name__ == "__main__":
     best_matches_fr_de, _, _, _ = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True)
 
     # Matching topics Query: German / Corpus: French
-    best_matches_de_fr, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
+    best_matches_de_fr, _, _, _ = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
 
-    print(pd.concat([best_matches_de_fr, best_matches_fr_de]).drop_duplicates())
+    print(pd.concat([best_matches_de_fr, best_matches_fr_de]))
     # print(hit_list)
     # print(corpus_embedding)
     # print(top_k)

@@ -7,6 +7,7 @@ from gensim import corpora
 from gensim.models import LdaModel
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
+from nltk import ngrams
 from pathlib import Path
 import os
 import datetime
@@ -56,19 +57,27 @@ class TopicModellingService:
         stop_words = set(stopwords.words(language)) | TopicModellingService.custom_stopwords
 
         processed_texts = []
+        processed_texts_bigrams = []
+        processed_texts_trigrams = []
         nlp = nlp_de if language == 'german' else nlp_fr
 
         for doc in corpus:
             # Tokenize the document
             doc = nlp(str(doc).lower())  # Lowercase and tokenize
             tokens = [token.text for token in doc if not token.is_stop and not token.is_punct]
+            bigrams = list(ngrams(tokens, 2))
+            trigrams = list(ngrams(tokens, 3))
 
             # Lemmatize words and remove stopwords
             lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
+            lemmatized_bigrams_tokens = [lemmatizer.lemmatize(' '.join(token)) for token in bigrams]
+            lemmatized_trigrams_tokens = [lemmatizer.lemmatize(' '.join(token)) for token in trigrams]
 
             processed_texts.append(lemmatized_tokens)
+            processed_texts_bigrams.append(lemmatized_bigrams_tokens)
+            processed_texts_trigrams.append(lemmatized_trigrams_tokens)
 
-        return processed_texts
+        return processed_texts, processed_texts_bigrams, processed_texts_trigrams
 
     @staticmethod
     def fit_lda(
@@ -77,13 +86,14 @@ class TopicModellingService:
             num_topics=5,
             dataset_passes=5
     ):
-        processed_texts = TopicModellingService.preprocess(texts, language)
+        processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModellingService.preprocess(texts, language)
 
         logger.info(f"Fitting LDA for {language}.")
-        dictionary = corpora.Dictionary(processed_texts)
+        corpus = processed_texts + processed_texts_bigrams + processed_texts_trigrams
+        dictionary = corpora.Dictionary(corpus)
         logger.info(f"Created dictionary with {len(dictionary)} entries.")
 
-        corpus = [dictionary.doc2bow(text) for text in processed_texts]
+        corpus = [dictionary.doc2bow(text) for text in corpus]
         logger.info(f"Applying TFIDF to create a corpus, why?")
 
         logger.info(f"Fit online LDA with {dataset_passes}")
