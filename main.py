@@ -92,6 +92,7 @@ if __name__ == "__main__":
     number_of_topics = 100
     number_of_top_words = 10
     ds_passes = 2
+    match_score = 0.9
 
     # French
     french_series = sentiment_df[sentiment_df['language'] == 'fr'].iloc[:number_of_articles]['content']
@@ -120,10 +121,10 @@ if __name__ == "__main__":
     print(df_topics_de)
 
     # Matching topics Query: French / Corpus: German
-    best_matches_fr_de, _, _, _ = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True)
+    best_matches_fr_de, _, _, _ = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True)
 
     # Matching topics Query: German / Corpus: French
-    best_matches_de_fr, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True, invert=True)
+    best_matches_de_fr, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
 
     print(pd.concat([best_matches_de_fr, best_matches_fr_de]).drop_duplicates())
     # print(hit_list)
