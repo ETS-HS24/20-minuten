@@ -1,6 +1,7 @@
 import glob
 import os
 import sys
+import pandas as pd
 import logging
 from pathlib import Path
 from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
@@ -118,9 +119,13 @@ if __name__ == "__main__":
     df_topics_de = german_top_words_per_topic
     print(df_topics_de)
 
-    # Matching topics German / French
-    best_matches, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True)
-    print(best_matches.drop_duplicates())
+    # Matching topics Query: French / Corpus: German
+    best_matches_fr_de, _, _, _ = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True)
+
+    # Matching topics Query: German / Corpus: French
+    best_matches_de_fr, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True, invert=True)
+
+    print(pd.concat([best_matches_de_fr, best_matches_fr_de]).drop_duplicates())
     # print(hit_list)
     # print(corpus_embedding)
     # print(top_k)
