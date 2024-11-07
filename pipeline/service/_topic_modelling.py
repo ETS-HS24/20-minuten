@@ -11,7 +11,6 @@ from pathlib import Path
 import os
 import datetime
 import glob
-import urllib.request
 
 logger = logging.getLogger(__name__)
 
@@ -48,22 +47,13 @@ lemmatizer = WordNetLemmatizer()
 class TopicModellingService:
     default_model_path: str = './models'
 
-    custom_stopwords: set = {
-        " ", "\x96", "the", "to", "of", "20", "minuten",
-    }
-
-    stopwords_german_full_url: str = 'https://raw.githubusercontent.com/solariz/german_stopwords/refs/heads/master/german_stopwords_full.txt'
-    stopwords_french_full_url: str = 'https://raw.githubusercontent.com/stopwords-iso/stopwords-fr/refs/heads/master/stopwords-fr.txt'
+    custom_stopwords: set = {" ", "\x96", "the", "to", "of", "20", "minuten"}
 
     @staticmethod
     def preprocess(corpus, language='german'):
         logger.info(f"Preprocessing {len(corpus)} texts for topic modelling.")
 
-        # Stop words
-        stopwords_url = TopicModellingService.stopwords_german_full_url if language == 'german' else TopicModellingService.stopwords_french_full_url
-        with urllib.request.urlopen(stopwords_url) as f:
-            stopwords_full = f.read().decode('utf-8')
-        stop_words = set(stopwords.words(language)) | set(stopwords_full) | TopicModellingService.custom_stopwords
+        stop_words = set(stopwords.words(language)) | TopicModellingService.custom_stopwords
 
         processed_texts = []
         nlp = nlp_de if language == 'german' else nlp_fr
