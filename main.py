@@ -126,7 +126,6 @@ if __name__ == "__main__":
     # Matching topics Query: German / Corpus: French
     best_matches_de_fr, _, _, _ = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
 
-    print(pd.concat([best_matches_de_fr, best_matches_fr_de]))
-    # print(hit_list)
-    # print(corpus_embedding)
-    # print(top_k)
+    best_matches = pd.concat([best_matches_de_fr, best_matches_fr_de])
+
+    FileService.df_to_csv(df=best_matches, file_name="best_matches")
