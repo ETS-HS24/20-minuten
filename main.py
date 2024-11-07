@@ -53,14 +53,14 @@ if __name__ == "__main__":
 
     
     if (
-        not Path(FileService.get_parquet_path(file_name='articles_lemmatized')).exists()
+        not Path(FileService.get_parquet_path(file_name='articles_lemmatized_spacy')).exists()
         or force_recreate
         or _previous_step_recreate
         ):
         logger.info("Recreating lemmatized dataset.")
         ########## Lemmatize Data #########
-        lemmatized_articles_df = TextService.lemmatize_content(df=cleaned_articles_df)
-        FileService.df_to_parquet(lemmatized_articles_df, 'articles_lemmatized')
+        lemmatized_articles_df = TextService.lemmatize_content_spacy(df=cleaned_articles_df)
+        FileService.df_to_parquet(lemmatized_articles_df, 'articles_lemmatized_spacy')
         _previous_step_recreate = True
     else:
         logger.info("Not recreating lemmatized dataset.")
