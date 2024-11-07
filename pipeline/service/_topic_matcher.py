@@ -19,7 +19,6 @@ class TopicMatcherService:
 
         # As per documentation this model is optimized to cluster sentences or paragraphs... not words
         # It supports 50 languages among others german and french
-        # bigger model, same authors: https://huggingface.co/sentence-transformers/paraphrase-multilingual-mpnet-base-v2
         model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2', device=mode)
 
         hit_list = []

@@ -22,7 +22,7 @@ if __name__ == "__main__":
     if matching_files:
         file_path = matching_files[0]
     else:
-        file_path = FileService.default_processed_path
+        file_path = FileService.default_processed_path + '/articles_raw.tsv'
 
     if (
             not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()
