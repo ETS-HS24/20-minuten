@@ -64,7 +64,7 @@ class TopicModellingService:
         for doc in corpus:
             # Tokenize the document
             doc = nlp(str(doc).lower())  # Lowercase and tokenize
-            tokens = [token.text for token in doc if not token.is_stop and not token.is_punct]
+            tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and (token.pos_ == "NOUN" or token.pos_ == "PROPN" or token.pos_ == "PRON")]  # only nouns
             bigrams = list(ngrams(tokens, 2))
             trigrams = list(ngrams(tokens, 3))
 
