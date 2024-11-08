@@ -15,26 +15,6 @@ from nltk.data import find
 
 
 class TextService:
-    nlp_de = spacy.load("de_core_news_sm")
-    nlp_fr = spacy.load("fr_core_news_sm")
-    nltk_data_downloaded = False
-
-    @staticmethod
-    def download_nltk_data():
-        if not TextService.nltk_data_downloaded:
-            try:
-                find('corpora/stopwords.zip')
-            except LookupError:
-                import nltk
-                nltk.download('stopwords')
-
-            try:
-                find('corpora/wordnet.zip')
-            except LookupError:
-                import nltk
-                nltk.download('wordnet')
-
-            TextService.nltk_data_downloaded = True
 
     @staticmethod
     def drop_columns(df: pd.DataFrame, columns_to_drop: list) -> pd.DataFrame:
@@ -127,8 +107,9 @@ class TextService:
         return df
 
     @staticmethod
-    def lemmatize_content_nltk(df: pd.DataFrame) -> pd.DataFrame:
-        TextService.download_nltk_data()
+    def lemmatize_content_nltk(df: pd.DataFrame, column_to_process: str = "content") -> pd.DataFrame:
+        nlp_de = spacy.load("de_core_news_sm")
+        nlp_fr = spacy.load("fr_core_news_sm")
         lemmatizer = WordNetLemmatizer()
 
         custom_stop_words: set = {
@@ -146,13 +127,13 @@ class TextService:
 
         def lemmatize_text(doc: str, lang: str):
             if lang == "fr":
-                doc = TextService.nlp_fr(str(doc).lower())
+                doc = nlp_fr(str(doc).lower())
                 tokenized_article = [token.text for token in doc if not token.is_stop and not token.is_punct]
                 lemmatized_article = [lemmatizer.lemmatize(token) for token in tokenized_article if
                                       token not in french_stop_words]
 
             else:
-                doc = TextService.nlp_de(str(doc).lower())
+                doc = nlp_de(str(doc).lower())
                 tokenized_article = [token.text for token in doc if not token.is_stop and not token.is_punct]
                 lemmatized_article = [lemmatizer.lemmatize(token) for token in tokenized_article if
                                       token not in german_stop_words]
@@ -161,18 +142,20 @@ class TextService:
 
         tqdm.pandas()
         df["content_lemmatized"] = df.progress_apply(
-            lambda x: pd.Series(lemmatize_text(x["content"], x["language"])), axis=1
+            lambda x: pd.Series(lemmatize_text(x[column_to_process], x["language"])), axis=1
         )
         return df
 
     @staticmethod
     def lemmatize_content_spacy(df: pd.DataFrame) -> pd.DataFrame:
+        nlp_de = spacy.load("de_core_news_sm")
+        nlp_fr = spacy.load("fr_core_news_sm")
 
         def lemmatize_text(doc: str, lang: str):
             if lang == "fr":
-                docs = TextService.nlp_fr.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
+                docs = nlp_fr.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
             else:
-                docs = TextService.nlp_de.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
+                docs = nlp_de.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
 
             alphas = [token.lemma_.lower() for doc in docs for token in doc if
                       not token.is_alpha and not token.is_punct and not token.is_space]
