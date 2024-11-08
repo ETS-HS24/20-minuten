@@ -89,7 +89,7 @@ class TopicModellingService:
         processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModellingService.preprocess(texts, language)
 
         logger.info(f"Fitting LDA for {language}.")
-        corpus = processed_texts + processed_texts_bigrams + processed_texts_trigrams
+        corpus = processed_texts # + processed_texts_bigrams + processed_texts_trigrams
         dictionary = corpora.Dictionary(corpus)
         logger.info(f"Created dictionary with {len(dictionary)} entries.")
 
