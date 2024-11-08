@@ -33,7 +33,7 @@ class TextService:
 
     @staticmethod
     def get_authors(article: str) -> List[str] | None:
-        soup = BeautifulSoup(article, 'html.parser')
+        soup = BeautifulSoup(article, 'lxml')
         if soup.p:
             last_p = soup.find_all("p")[-1].text
             if last_p[0] == "(" and last_p[-1] == ")":
