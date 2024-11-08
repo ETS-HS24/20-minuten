@@ -76,7 +76,7 @@ class TopicModelingService:
             dataset_passes=5,
             technique: str = 'lda',
     ):
-        processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModelingService.preprocess(texts, language)
+        processed_texts = TopicModelingService.preprocess(texts, language)
         model = None
         logger.info(f"Fitting {technique.upper()} for {language}.")
         dictionary = corpora.Dictionary(processed_texts)
