@@ -6,6 +6,9 @@ from bs4 import BeautifulSoup
 from typing import List
 import re
 import unicodedata
+
+from gensim import corpora
+from pyarrow import dictionary
 from tqdm import tqdm
 
 from nltk.corpus.europarl_raw import german
@@ -146,6 +149,32 @@ class TextService:
         )
         return df
 
+    @staticmethod
+    def lemmatize_content_from_dictionary(df: pd.DataFrame, column_to_process: str = "content", dict_type: str = "removed-pos" ) -> pd.DataFrame:
+        nlp_de = spacy.load("de_core_news_sm")
+        nlp_fr = spacy.load("fr_core_news_sm")
+        german_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-german-{dict_type}'))
+        french_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-french-{dict_type}'))
+
+        def lemmatize_text(doc: str, language: str):
+            if language == "de":
+                doc = nlp_de(str(doc).lower())
+                dictionary = german_dictionary
+            else:
+                doc = nlp_fr(str(doc).lower())
+                dictionary = french_dictionary
+
+            tokenized_article = [token.lemma_.lower() for token in doc if token.lemma_ in dictionary.token2id]
+            return ' '.join(tokenized_article)
+
+        tqdm.pandas()
+        df[f"{column_to_process}_lemmatized"] = df.progress_apply(
+            lambda x: lemmatize_text(x[column_to_process], x["language"]), axis=1
+        )
+        return df
+
+
+    ## TODO: Is this even relevant? We probably dont need it
     @staticmethod
     def lemmatize_content_spacy(df: pd.DataFrame) -> pd.DataFrame:
         nlp_de = spacy.load("de_core_news_sm")
