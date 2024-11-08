@@ -168,7 +168,7 @@ class TextService:
             return ' '.join(tokenized_article)
 
         tqdm.pandas()
-        df[f"{column_to_process}_lemmatized"] = df.progress_apply(
+        df[f"{column_to_process}_lemmatized_dict"] = df.progress_apply(
             lambda x: lemmatize_text(x[column_to_process], x["language"]), axis=1
         )
         return df
