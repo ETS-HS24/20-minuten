@@ -8,13 +8,9 @@ import re
 import unicodedata
 
 from gensim import corpora
-from pyarrow import dictionary
 from tqdm import tqdm
 
-from nltk.corpus.europarl_raw import german
 from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from nltk.data import find
 
 
 class TextService:
@@ -113,7 +109,6 @@ class TextService:
     def lemmatize_content_nltk(df: pd.DataFrame, column_to_process: str = "content") -> pd.DataFrame:
         nlp_de = spacy.load("de_core_news_sm")
         nlp_fr = spacy.load("fr_core_news_sm")
-        lemmatizer = WordNetLemmatizer()
 
         custom_stop_words: set = {
             " ", "\x96", "the", "to", "of", "20", "minuten",
@@ -128,18 +123,18 @@ class TextService:
         german_stop_words = set(stopwords.words("german")) | set(german_stop_words_full) | custom_stop_words
         french_stop_words = set(stopwords.words("french")) | set(french_stop_words_full) | custom_stop_words
 
+        nlp_de.Defaults.stop_words |= german_stop_words
+        nlp_fr.Defaults.stop_words |= french_stop_words
+
         def lemmatize_text(doc: str, lang: str):
             if lang == "fr":
-                doc = nlp_fr(str(doc).lower())
-                tokenized_article = [token.text for token in doc if not token.is_stop and not token.is_punct]
-                lemmatized_article = [lemmatizer.lemmatize(token) for token in tokenized_article if
-                                      token not in french_stop_words]
+                doc = nlp_fr(doc, disable=["senter","attribute_ruler","ner"])
+                lemmatized_article = [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
 
             else:
-                doc = nlp_de(str(doc).lower())
-                tokenized_article = [token.text for token in doc if not token.is_stop and not token.is_punct]
-                lemmatized_article = [lemmatizer.lemmatize(token) for token in tokenized_article if
-                                      token not in german_stop_words]
+                doc = nlp_de(text=doc, disable=["senter","attribute_ruler","ner"])
+                lemmatized_article = [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
+
 
             return ' '.join(lemmatized_article)
 
@@ -156,12 +151,12 @@ class TextService:
         german_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-german-{dict_type}'))
         french_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-french-{dict_type}'))
 
-        def lemmatize_text(doc: str, language: str):
+        def lemmatize_text(article: str, language: str):
             if language == "de":
-                doc = nlp_de(str(doc).lower())
+                doc = nlp_de(str(article).lower())
                 dictionary = german_dictionary
             else:
-                doc = nlp_fr(str(doc).lower())
+                doc = nlp_fr(str(article).lower())
                 dictionary = french_dictionary
 
             tokenized_article = [token.lemma_.lower() for token in doc if token.lemma_ in dictionary.token2id]
