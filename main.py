@@ -129,3 +129,11 @@ if __name__ == "__main__":
     best_matches = pd.concat([best_matches_de_fr, best_matches_fr_de])
 
     FileService.df_to_csv(df=best_matches, file_name="best_matches")
+
+    # Matching by translation
+    matches_by_translation, german_counts, french_counts = TopicMatcherService.match_by_translation(df_topics_de['Word'], df_topics_fr['Word'])
+    FileService.df_to_csv(df=matches_by_translation, file_name="matches_by_translation")
+
+    print(matches_by_translation)
+    print(german_counts)
+    print(french_counts)

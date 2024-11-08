@@ -2,6 +2,7 @@ from sentence_transformers import SentenceTransformer, util
 import pandas as pd
 import logging
 import torch
+from deep_translator import MyMemoryTranslator
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +59,28 @@ class TopicMatcherService:
         best_matches = df[df["Score"] >= match_score] if match_score else df
 
         return best_matches, hit_list, corpus_embedding, top_k
+
+    @staticmethod
+    def match_by_translation(german_tokens, french_tokens, print_matches=True):
+        matches = []
+        german_token_list = german_tokens.to_list()
+        french_token_list = french_tokens.to_list()
+        try:
+            translation = MyMemoryTranslator('de-DE', 'fr-FR').translate_batch(german_token_list)
+            if print_matches:
+                print(translation)
+        except Exception as e:
+            print(e)
+            return
+        for index, german_token in enumerate(german_token_list):
+            if translation[index] in french_token_list:
+                matches.append((german_token, translation[index]))
+                if print_matches:
+                    print(german_token, translation[index])
+        df = pd.DataFrame(matches)
+        df.columns.array[0] = 'German'
+        df.columns.array[1] = 'French'
+        return df, df['German'].value_counts(), df['French'].value_counts()
 
 
 if __name__ == '__main__':
