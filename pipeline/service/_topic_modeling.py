@@ -156,11 +156,11 @@ class TopicModelingService:
             return LsiModel.load(model_name)
 
     @staticmethod
-    def get_top_words_per_topic(model, n_top_words):
+    def get_top_words_per_topic(model, n_top_words, technique: str = 'lda'):
         top_words_per_topic = []
         for topic_id in range(model.num_topics):
             top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])
-        return pd.DataFrame(top_words_per_topic, columns=["Topic", "Word", "Probability"])
+        return pd.DataFrame(top_words_per_topic, columns=["Topic", "Word", "Probability" if technique == 'lda' else "Weight"])
 
 
 if __name__ == '__main__':

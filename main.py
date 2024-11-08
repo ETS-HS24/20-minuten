@@ -100,12 +100,12 @@ if __name__ == "__main__":
     ### LDA ###
     # French
     french_lda_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
-    df_lda_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lda_model, n_top_words=number_of_top_words)
+    df_lda_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lda_model, n_top_words=number_of_top_words, technique='lda')
     FileService.df_to_csv(df=df_lda_topics_fr, file_name="lda_topics_fr")
 
     # German
     german_lda_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
-    df_lda_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lda_model, n_top_words=number_of_top_words)
+    df_lda_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lda_model, n_top_words=number_of_top_words, technique='lda')
     FileService.df_to_csv(df=df_lda_topics_de, file_name="lda_topics_de")
 
     # Matching topics Query: French / Corpus: German
@@ -129,12 +129,12 @@ if __name__ == "__main__":
     ### LSA ###
     # French
     french_lsa_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
-    df_lsa_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lsa_model, n_top_words=number_of_top_words)
+    df_lsa_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lsa_model, n_top_words=number_of_top_words, technique='lsa')
     FileService.df_to_csv(df=df_lsa_topics_fr, file_name="lsa_topics_fr")
 
     # German
     german_lsa_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
-    df_lsa_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lsa_model, n_top_words=number_of_top_words)
+    df_lsa_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lsa_model, n_top_words=number_of_top_words, technique='lsa')
     FileService.df_to_csv(df=df_lsa_topics_de, file_name="lsa_topics_de")
 
     # Matching topics Query: French / Corpus: German
