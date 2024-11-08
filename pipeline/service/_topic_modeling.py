@@ -4,7 +4,7 @@ import nltk
 import spacy
 from spacy.cli.download import download as spacy_download
 from gensim import corpora
-from gensim.models import LdaModel
+from gensim.models import LdaModel, LsiModel
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from nltk import ngrams
@@ -80,15 +80,16 @@ class TopicModelingService:
         return processed_texts, processed_texts_bigrams, processed_texts_trigrams
 
     @staticmethod
-    def fit_lda(
+    def fit_model(
             texts,
             language,
             num_topics=5,
-            dataset_passes=5
+            dataset_passes=5,
+            technique: str = 'lda',
     ):
         processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModelingService.preprocess(texts, language)
-
-        logger.info(f"Fitting LDA for {language}.")
+        model = None
+        logger.info(f"Fitting {technique.upper()} for {language}.")
         corpus = processed_texts # + processed_texts_bigrams + processed_texts_trigrams
         dictionary = corpora.Dictionary(corpus)
         logger.info(f"Created dictionary with {len(dictionary)} entries.")
@@ -96,14 +97,18 @@ class TopicModelingService:
         corpus = [dictionary.doc2bow(text) for text in corpus]
         logger.info(f"Applying TFIDF to create a corpus, why?")
 
-        logger.info(f"Fit online LDA with {dataset_passes}")
-        lda_model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
+        logger.info(f"Fit online {technique.upper()} with {dataset_passes}")
+        if technique == 'lda':
+            model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
+        elif technique == 'lsa':
+            model = LsiModel(corpus, num_topics=num_topics, id2word=dictionary)
 
-        return lda_model, corpus, dictionary
+        return model, corpus, dictionary
 
     @staticmethod
     def save_gensim_model(
-            model: LdaModel,
+            model: LdaModel | LsiModel,
+            technique: str = 'lda',
             language: str | None = None,
             model_name: str | None = None,
             model_folder: str = default_model_path
@@ -117,7 +122,7 @@ class TopicModelingService:
 
             now = datetime.datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
-            model_name = f"lda-model-{language}-{timestamp}-{model.num_topics}topics-{len(model.id2word)}dictsize"
+            model_name = f"{technique}-model-{language}-{timestamp}-{model.num_topics}topics-{len(model.id2word)}dictsize"
 
         model_path = os.path.join(model_folder, model_name)
 
@@ -131,24 +136,27 @@ class TopicModelingService:
     @staticmethod
     def load_gensim_model(
             language: str | None = None,
+            technique: str = 'lda',
             full_model_path: str | None = None,
             default_model_folder: str | None = default_model_path
-    ) -> LdaModel:
-
+    ) -> LdaModel | LsiModel:
         if not full_model_path:
             assert language, f"If full_model_path is not set you must set the language."
             assert default_model_folder, f"If full_model_path is not set you must set the default_model_folder"
 
-            all_models = glob.glob(os.path.join(default_model_folder, f"lda-model-{language}-*"), recursive=True)
+            all_models = glob.glob(os.path.join(default_model_folder, f"{technique}-model-{language}-*"), recursive=True)
             logger.info(f"Found {len(all_models)} models for {language}. Loading most recent one.")
             full_model_path = all_models[-1]
 
         assert not full_model_path.endswith("model"), "Provide the path to the folder, don't append 'model'."
-
-        return LdaModel.load(os.path.join(full_model_path, "model"))
+        model_name = os.path.join(full_model_path, "model")
+        if technique == 'lda':
+            return LdaModel.load(model_name)
+        elif technique == 'lsa':
+            return LsiModel.load(model_name)
 
     @staticmethod
-    def lda_top_words_per_topic(model, n_top_words):
+    def get_top_words_per_topic(model, n_top_words):
         top_words_per_topic = []
         for topic_id in range(model.num_topics):
             top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])

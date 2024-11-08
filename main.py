@@ -93,31 +93,63 @@ if __name__ == "__main__":
     ds_passes = 2
     match_score = 0.9
 
-    # French
+    # Data
     french_series = sentiment_df[sentiment_df['language'] == 'fr'].iloc[:number_of_articles]['content']
-    french_model, _, _ = TopicModelingService.fit_lda(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes)
-    df_topics_fr = TopicModelingService.lda_top_words_per_topic(model=french_model, n_top_words=number_of_top_words)
-    FileService.df_to_csv(df=df_topics_fr, file_name="topics_fr")
+    german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
+
+    ### LDA ###
+    # French
+    french_lda_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
+    df_lda_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lda_model, n_top_words=number_of_top_words)
+    FileService.df_to_csv(df=df_lda_topics_fr, file_name="lda_topics_fr")
 
     # German
-    german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
-    german_model, _, _ = TopicModelingService.fit_lda(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes)
-    df_topics_de = TopicModelingService.lda_top_words_per_topic(model=german_model, n_top_words=number_of_top_words)
-    FileService.df_to_csv(df=df_topics_de, file_name="topics_de")
+    german_lda_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
+    df_lda_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lda_model, n_top_words=number_of_top_words)
+    FileService.df_to_csv(df=df_lda_topics_de, file_name="lda_topics_de")
 
     # Matching topics Query: French / Corpus: German
-    best_matches_fr_de, _, _, _ = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True)
+    best_lda_matches_fr_de, _, _, _ = TopicMatcherService.match(df_lda_topics_de['Word'], df_lda_topics_fr['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True)
 
     # Matching topics Query: German / Corpus: French
-    best_matches_de_fr, _, _, _ = TopicMatcherService.match(df_topics_fr['Word'], df_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
+    best_lda_matches_de_fr, _, _, _ = TopicMatcherService.match(df_lda_topics_fr['Word'], df_lda_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
 
-    best_matches = pd.concat([best_matches_de_fr, best_matches_fr_de])
-    FileService.df_to_csv(df=best_matches, file_name="best_matches")
+    best_lda_matches = pd.concat([best_lda_matches_de_fr, best_lda_matches_fr_de])
+    FileService.df_to_csv(df=best_lda_matches, file_name="best_lda_matches")
 
     # Matching by translation
-    matches_by_translation, german_counts, french_counts = TopicMatcherService.match_by_translation(df_topics_de['Word'], df_topics_fr['Word'])
-    FileService.df_to_csv(df=matches_by_translation, file_name="matches_by_translation")
+    lda_matches_by_translation, lda_german_counts, lda_french_counts = TopicMatcherService.match_by_translation(df_lda_topics_de['Word'], df_lda_topics_fr['Word'])
+    FileService.df_to_csv(df=lda_matches_by_translation, file_name="lda_matches_by_translation")
 
-    print(matches_by_translation)
-    print(german_counts)
-    print(french_counts)
+    print(lda_matches_by_translation)
+    print(lda_german_counts)
+    print(lda_french_counts)
+
+
+    ### LSA ###
+    # French
+    french_lsa_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
+    df_lsa_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lsa_model, n_top_words=number_of_top_words)
+    FileService.df_to_csv(df=df_lsa_topics_fr, file_name="lsa_topics_fr")
+
+    # German
+    german_lsa_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
+    df_lsa_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lsa_model, n_top_words=number_of_top_words)
+    FileService.df_to_csv(df=df_lsa_topics_de, file_name="lsa_topics_de")
+
+    # Matching topics Query: French / Corpus: German
+    best_lsa_matches_fr_de, _, _, _ = TopicMatcherService.match(df_lsa_topics_de['Word'], df_lsa_topics_fr['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True)
+
+    # Matching topics Query: German / Corpus: French
+    best_lsa_matches_de_fr, _, _, _ = TopicMatcherService.match(df_lsa_topics_fr['Word'], df_lsa_topics_de['Word'], number_of_top=number_of_top_words, match_score=match_score, print_matches=True, invert=True)
+
+    best_lsa_matches = pd.concat([best_lsa_matches_de_fr, best_lsa_matches_fr_de])
+    FileService.df_to_csv(df=best_lsa_matches, file_name="best_lsa_matches")
+
+    # Matching by translation
+    lsa_matches_by_translation, lsa_german_counts, lsa_french_counts = TopicMatcherService.match_by_translation(df_lsa_topics_de['Word'], df_lsa_topics_fr['Word'])
+    FileService.df_to_csv(df=lsa_matches_by_translation, file_name="lsa_matches_by_translation")
+
+    print(lsa_matches_by_translation)
+    print(lsa_german_counts)
+    print(lsa_french_counts)
