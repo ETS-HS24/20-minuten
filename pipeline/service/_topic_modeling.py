@@ -45,16 +45,16 @@ lemmatizer = WordNetLemmatizer()
 # python -m spacy download fr_core_news_sm
 # python -m spacy download de_core_news_sm
 
-class TopicModellingService:
+class TopicModelingService:
     default_model_path: str = './models'
 
     custom_stopwords: set = {" ", "\x96", "the", "to", "of", "20", "minuten"}
 
     @staticmethod
     def preprocess(corpus, language='german'):
-        logger.info(f"Preprocessing {len(corpus)} texts for topic modelling.")
+        logger.info(f"Preprocessing {len(corpus)} texts for topic modeling.")
 
-        stop_words = set(stopwords.words(language)) | TopicModellingService.custom_stopwords
+        stop_words = set(stopwords.words(language)) | TopicModelingService.custom_stopwords
 
         processed_texts = []
         processed_texts_bigrams = []
@@ -86,7 +86,7 @@ class TopicModellingService:
             num_topics=5,
             dataset_passes=5
     ):
-        processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModellingService.preprocess(texts, language)
+        processed_texts, processed_texts_bigrams, processed_texts_trigrams = TopicModelingService.preprocess(texts, language)
 
         logger.info(f"Fitting LDA for {language}.")
         corpus = processed_texts # + processed_texts_bigrams + processed_texts_trigrams

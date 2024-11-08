@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 import logging
 from pathlib import Path
-from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
+from pipeline.service import FileService, SentimentService, TextService, TopicModelingService, TopicMatcherService
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout,
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         logger.info("Not recreating sentiment analysis.")
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
-    ############# Topic Modelling #############
+    ############# Topic Modeling #############
     number_of_articles = 1000
     number_of_topics = 100
     number_of_top_words = 10
@@ -95,14 +95,14 @@ if __name__ == "__main__":
 
     # French
     french_series = sentiment_df[sentiment_df['language'] == 'fr'].iloc[:number_of_articles]['content']
-    french_model, _, _ = TopicModellingService.fit_lda(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes)
-    df_topics_fr = TopicModellingService.lda_top_words_per_topic(model=french_model, n_top_words=number_of_top_words)
+    french_model, _, _ = TopicModelingService.fit_lda(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes)
+    df_topics_fr = TopicModelingService.lda_top_words_per_topic(model=french_model, n_top_words=number_of_top_words)
     FileService.df_to_csv(df=df_topics_fr, file_name="topics_fr")
 
     # German
     german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
-    german_model, _, _ = TopicModellingService.fit_lda(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes)
-    df_topics_de = TopicModellingService.lda_top_words_per_topic(model=german_model, n_top_words=number_of_top_words)
+    german_model, _, _ = TopicModelingService.fit_lda(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes)
+    df_topics_de = TopicModelingService.lda_top_words_per_topic(model=german_model, n_top_words=number_of_top_words)
     FileService.df_to_csv(df=df_topics_de, file_name="topics_de")
 
     # Matching topics Query: French / Corpus: German
