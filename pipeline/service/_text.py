@@ -137,7 +137,7 @@ class TextService:
                     lemmatized_article = " ".join([token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct])
                     articles.append(lemmatized_article)
             
-            return pd.Series(data=lemmatized_article, index=documents.index, dtype=documents.dtype)
+            return pd.Series(data=articles, index=documents.index, dtype=documents.dtype)
 
         mask_d = (df['language'] == "de")
         mask_f = (df['language'] == "fr")
@@ -149,51 +149,4 @@ class TextService:
         df[f"{column_to_process}_lemmatized"] = df[f"{column_to_process}_lemmatized"].astype(df[column_to_process].dtype)
         df.loc[mask_d, f"{column_to_process}_lemmatized"] = lemmatize_text(masked_column_de, "de")
         df.loc[mask_f, f"{column_to_process}_lemmatized"] = lemmatize_text(masked_column_fr, "fr")
-        return df
-
-    @staticmethod
-    def lemmatize_content_from_dictionary(df: pd.DataFrame, column_to_process: str = "content", dict_type: str = "removed-pos" ) -> pd.DataFrame:
-        nlp_de = spacy.load("de_core_news_sm")
-        nlp_fr = spacy.load("fr_core_news_sm")
-        german_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-german-{dict_type}'))
-        french_dictionary = corpora.Dictionary.load(os.path.normpath(f'./models/dictionaries/dictionary-french-{dict_type}'))
-
-        def lemmatize_text(article: str, language: str):
-            if language == "de":
-                doc = nlp_de(str(article).lower())
-                dictionary = german_dictionary
-            else:
-                doc = nlp_fr(str(article).lower())
-                dictionary = french_dictionary
-
-            tokenized_article = [token.lemma_.lower() for token in doc if token.lemma_ in dictionary.token2id]
-            return ' '.join(tokenized_article)
-
-        tqdm.pandas()
-        df[f"{column_to_process}_lemmatized_dict"] = df.progress_apply(
-            lambda x: lemmatize_text(x[column_to_process], x["language"]), axis=1
-        )
-        return df
-
-
-    ## TODO: Is this even relevant? We probably dont need it
-    @staticmethod
-    def lemmatize_content_spacy(df: pd.DataFrame) -> pd.DataFrame:
-        nlp_de = spacy.load("de_core_news_sm")
-        nlp_fr = spacy.load("fr_core_news_sm")
-
-        def lemmatize_text(doc: str, lang: str):
-            if lang == "fr":
-                docs = nlp_fr.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
-            else:
-                docs = nlp_de.pipe([doc], disable=["tagger", "ner", "textcat"], n_process=4)
-
-            alphas = [token.lemma_.lower() for doc in docs for token in doc if
-                      not token.is_alpha and not token.is_punct and not token.is_space]
-            return ' '.join(alphas)
-
-        tqdm.pandas()
-        df["content_lemmatized"] = df.progress_apply(
-            lambda x: lemmatize_text(x["content"], x["language"]), axis=1
-        )
         return df

@@ -59,7 +59,6 @@ if __name__ == "__main__":
         logger.info("Recreating lemmatized dataset.")
         ########## Lemmatize Data #########
         lemmatized_articles_df = TextService.lemmatize_content_nltk(df=cleaned_articles_df, column_to_process="content")
-        #lemmatized_articles_df = TextService.lemmatize_content_from_dictionary(df=lemmatized_articles_df) # NOTE: Not sure I understand this function. Can this be integrated in the one before so everything happens in one pass?
         FileService.df_to_parquet(lemmatized_articles_df, 'articles_lemmatized')
         _previous_step_recreate = True
     else:
