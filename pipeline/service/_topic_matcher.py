@@ -41,7 +41,7 @@ class TopicMatcherService:
         return best_matches, hit_list, corpus_embedding, top_k
 
     @staticmethod
-    def match_by_translation(german_tokens, french_tokens, print_matches=True):
+    def match_by_translation(german_tokens, french_tokens):
         logger.info(f"Match german and french tokens by translation.")
         matches = []
         german_token_list = german_tokens.to_list()
@@ -57,8 +57,6 @@ class TopicMatcherService:
         for index, german_token in enumerate(german_token_list):
             if translation[index] in french_token_list:
                 matches.append((german_token, translation[index]))
-                if print_matches:
-                    print(german_token, translation[index])
         df = pd.DataFrame(matches, columns=["german", "french"])
         german_counts = 0
         french_counts = 0
