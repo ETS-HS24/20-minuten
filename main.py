@@ -25,10 +25,10 @@ if __name__ == "__main__":
         file_path = FileService.default_processed_path
 
     if (
-        not Path(FileService.get_parquet_path(file_name='articles_raw')).exists() 
-        or force_recreate
-        or _previous_step_recreate
-        ): 
+            not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
         logger.info(f"Recreating raw parquet.")
         articles_df = FileService.read_tsv_to_df(file_path)
         FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
@@ -38,31 +38,46 @@ if __name__ == "__main__":
         articles_df = FileService.read_parquet_to_df(file_name='articles_raw')
 
     if (
-        not Path(FileService.get_parquet_path(file_name='articles_cleaned')).exists() 
-        or force_recreate
-        or _previous_step_recreate
-        ): 
+            not Path(FileService.get_parquet_path(file_name='articles_cleaned')).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
         logger.info("Recreating cleaned dataset.")
         ######### Pre-process Data #########
-        cleaned_articles_df = TextService.drop_columns(df=articles_df, columns_to_drop=["rubric", "regional", "subhead"])
+        cleaned_articles_df = TextService.drop_columns(df=articles_df,
+                                                       columns_to_drop=["rubric", "regional", "subhead"])
         cleaned_articles_df = TextService.process_tags(df=cleaned_articles_df)
         FileService.df_to_parquet(cleaned_articles_df, 'articles_cleaned')
         _previous_step_recreate = True
-    
+
     else:
         logger.info("Not recreating cleaned dataset.")
         cleaned_articles_df = FileService.read_parquet_to_df(file_name='articles_cleaned')
 
-    
     if (
-        not Path(FileService.get_parquet_path(file_name='articles_sentiment')).exists() 
-        or force_recreate
-        or _previous_step_recreate
-        ): 
-        logger.info(f"Recreating sentiment analysis.")
+            not Path(FileService.get_parquet_path(file_name='articles_lemmatized')).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
+        logger.info("Recreating lemmatized dataset.")
+        ########## Lemmatize Data #########
+        lemmatized_articles_df = TextService.lemmatize_content_nltk(df=cleaned_articles_df, column_to_process="content")
+        FileService.df_to_parquet(lemmatized_articles_df, 'articles_lemmatized')
+        _previous_step_recreate = True
+    else:
+        logger.info("Not recreating lemmatized dataset.")
+        lemmatized_articles_df = FileService.read_parquet_to_df(file_name='articles_lemmatized')
+
+    if (
+            not Path(FileService.get_parquet_path(file_name='articles_sentiment')).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
+        logger.info(f"Recreating sentiment analysis")
         ############# Sentiment Analysis ############
         # Add sentiment to each article
-        sentiment_df = SentimentService.sentimental_analysis(cleaned_articles_df)
+        sentiment_df = SentimentService.sentimental_analysis(data_frame=lemmatized_articles_df,
+                                                             column_to_process="content_lemmatized")
         # Save the DataFrame as a parquet file
         FileService.df_to_parquet(sentiment_df, 'articles_sentiment')
         _previous_step_recreate = True

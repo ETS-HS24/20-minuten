@@ -40,7 +40,7 @@ class SentimentService:
                 print(f"{sentiment.capitalize()} Articles: {count} ({percentage:.2f}%)")
 
     @staticmethod
-    def sentimental_analysis(data_frame: pd.DataFrame) -> pd.DataFrame:
+    def sentimental_analysis(data_frame: pd.DataFrame, column_to_process: str = "content") -> pd.DataFrame:
 
         french_tokenizer = AutoTokenizer.from_pretrained("camembert-base")
         french_model = CamembertForSequenceClassification.from_pretrained("camembert-base")
@@ -74,7 +74,7 @@ class SentimentService:
         tqdm.pandas()
         # pass content and language to the function
         data_frame[['sentiment', 'score']] = data_frame.progress_apply(
-            lambda x: pd.Series(process_content(x['content'], x['language'])), axis=1)
+            lambda x: pd.Series(process_content(x[column_to_process], x['language'])), axis=1)
 
         data_frame['sentiment'] = data_frame['sentiment'].astype(str)
         return data_frame
