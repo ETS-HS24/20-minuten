@@ -54,9 +54,9 @@ class TopicMatcherService:
         except Exception as e:
             logger.error(f"Translation of tokens could not be done, see error: {e}")
             return
-        for index, german_token in enumerate(german_token_list):
-            if translation[index] in french_token_list:
-                matches.append((german_token, translation[index]))
+        for french_translation, german_token in zip(translation, german_token_list):
+            if french_translation in french_token_list:
+                matches.append((german_token, french_translation))
         df = pd.DataFrame(matches, columns=["german", "french"])
         german_counts = 0
         french_counts = 0
