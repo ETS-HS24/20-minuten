@@ -38,7 +38,7 @@ class TopicMatcherService:
             result.append(d)
         df = pd.DataFrame(result, columns=[query_label, corpus_label, "score"])
         best_matches = df[df["score"] >= match_score] if match_score else df
-        return best_matches, hit_list, corpus_embedding, top_k
+        return best_matches, df, hit_list, corpus_embedding, top_k
 
     @staticmethod
     def match_by_translation(german_tokens, french_tokens):
