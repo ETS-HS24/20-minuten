@@ -87,8 +87,8 @@ if __name__ == "__main__":
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
     ############# Topic Modeling #############
-    number_of_articles = 500
-    number_of_topics = 10
+    number_of_articles = 1000
+    number_of_topics = 50
     number_of_top_words = 5
     ds_passes = 2
     match_score = 0.9
