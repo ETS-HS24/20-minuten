@@ -5,7 +5,6 @@ import spacy
 from spacy.cli.download import download as spacy_download
 from gensim import corpora
 from gensim.models import LdaModel, LsiModel
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 from pathlib import Path
 import os
@@ -47,13 +46,9 @@ lemmatizer = WordNetLemmatizer()
 class TopicModelingService:
     default_model_path: str = './models'
 
-    custom_stopwords: set = {" ", "\x96", "the", "to", "of", "20", "minuten"}
-
     @staticmethod
     def preprocess(corpus, language='german'):
         logger.info(f"Preprocessing {len(corpus)} texts for topic modeling.")
-
-        stop_words = set(stopwords.words(language)) | TopicModelingService.custom_stopwords
         processed_texts = []
         nlp = nlp_de if language == 'german' else nlp_fr
 
@@ -63,7 +58,7 @@ class TopicModelingService:
             tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and (token.pos_ == "NOUN" or token.pos_ == "PROPN" or token.pos_ == "PRON")]  # only nouns
 
             # Lemmatize words and remove stopwords
-            lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
+            lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens]
             processed_texts.append(lemmatized_tokens)
 
         return processed_texts
