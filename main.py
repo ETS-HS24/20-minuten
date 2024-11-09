@@ -20,10 +20,7 @@ if __name__ == "__main__":
 
     matching_files = glob.glob(search_pattern, recursive=True)
 
-    if matching_files:
-        file_path = matching_files[0]
-    else:
-        file_path = FileService.default_processed_path + '/articles_raw.tsv'
+    file_path = matching_files[0]
 
     if (
             not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()
