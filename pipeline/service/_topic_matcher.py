@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 class TopicMatcherService:
 
     @staticmethod
-    def match(corpus, queries, number_of_top=5, match_score=0.9, print_matches=True, invert=False):
+    def match_by_sentence_transformer(corpus, queries, number_of_top=5, match_score=0.9, print_matches=True, invert=False):
+        logger.info(f"Match by sentence transformer.")
         if torch.cuda.is_available():
             logger.info(f"GPU is available, setting mode to 'cuda'.")
             mode = 'cuda'
@@ -24,12 +25,9 @@ class TopicMatcherService:
         # As per documentation this model is optimized to cluster sentences or paragraphs... not words
         # It supports 50 languages among others german and french
         model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2', device=mode)
-
         hit_list = []
         result = []
-
         corpus_embedding = model.encode(corpus, convert_to_tensor=True, normalize_embeddings=True)
-
         top_k = min(number_of_top, len(corpus))
 
         for query in queries:
@@ -37,7 +35,6 @@ class TopicMatcherService:
             hits = util.semantic_search(query_embedding, corpus_embedding, score_function=util.dot_score)
             hits = hits[0]
             hit_list.append(hits)
-
             d: dict = {}
 
             if print_matches:
@@ -62,13 +59,15 @@ class TopicMatcherService:
 
     @staticmethod
     def match_by_translation(german_tokens, french_tokens, print_matches=True):
+        logger.info(f"Match german and french tokens by translation.")
         matches = []
         german_token_list = german_tokens.to_list()
         french_token_list = french_tokens.to_list()
         try:
             translation = MyMemoryTranslator('de-DE', 'fr-FR').translate_batch(german_token_list)
-            if print_matches:
-                print(translation)
+            translation = [x.lower() for x in translation] # lowercase
+            translation = [x.replace('la ', '').replace('le ', '') .replace('les ', '') for x in translation] # remove french articles
+            logger.info(f"Translation of tokens done.")
         except Exception as e:
             print(e)
             return
@@ -78,9 +77,23 @@ class TopicMatcherService:
                 if print_matches:
                     print(german_token, translation[index])
         df = pd.DataFrame(matches)
-        df.columns.array[0] = 'German'
-        df.columns.array[1] = 'French'
-        return df, df['German'].value_counts(), df['French'].value_counts()
+        german_counts = 0
+        french_counts = 0
+        if len(df.index) != 0:
+            first_column = df.columns[0]
+            second_column = df.columns[1]
+            df.rename(columns={first_column: 'German', second_column: 'French'}, inplace=True)
+            german_counts = df['German'].value_counts()
+            french_counts = df['French'].value_counts()
+        if print_matches:
+            print("german", german_token_list)
+            print("translation", translation)
+            print("french", french_token_list)
+            print("matches", matches)
+            print(df)
+            print("german counts", german_counts)
+            print("french counts", french_counts)
+        return df, german_counts, french_counts
 
 
 if __name__ == '__main__':
