@@ -143,7 +143,7 @@ class TopicModelingService:
         top_words_per_topic = []
         for topic_id in range(model.num_topics):
             top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])
-        return pd.DataFrame(top_words_per_topic, columns=["Topic", "Word", "Probability" if technique == 'lda' else "Weight"])
+        return pd.DataFrame(top_words_per_topic, columns=["topic", "word", "probability" if technique == 'lda' else "weight"])
 
 
 if __name__ == '__main__':
