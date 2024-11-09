@@ -20,7 +20,7 @@ for nltk_data in ["stopwords", "wordnet"]:
         logger.info(f"NLTK data {nltk_data} found locally, not downloading.")
     except LookupError:
         logger.info(f"NLTK data {nltk_data} not found... downloading it.")
-        nltk.download(nltk_data)
+        nltk.download(nltk_data, quiet=True)
 
 # Initialize spacy model and lemmatizer
 try:
@@ -49,19 +49,22 @@ class TopicModelingService:
     @staticmethod
     def preprocess(corpus, language='german'):
         logger.info(f"Preprocessing {len(corpus)} texts for topic modeling.")
-        processed_texts = []
+        pos_to_remove = ["ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NUM", "PART", "PRON", "PUNCT", "SCONJ", "SYM"]
         nlp = nlp_de if language == 'german' else nlp_fr
-
-        for doc in corpus:
-            # Tokenize the document
-            doc = nlp(str(doc).lower())  # Lowercase and tokenize
-            tokens = [token.text for token in doc if not token.is_stop and not token.is_punct and (token.pos_ == "NOUN" or token.pos_ == "PROPN" or token.pos_ == "PRON")]  # only nouns
-
-            # Lemmatize words and remove stopwords
-            lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens]
-            processed_texts.append(lemmatized_tokens)
-
-        return processed_texts
+        articles = nlp.pipe(corpus, disable=["tagger", "ner", "textcat"], n_process=4)
+        tokenized_articles = []
+        for article in articles:
+            article_tokens = []
+            for token in article:
+                if (
+                    token.pos_ not in pos_to_remove  # Remove defined parts of speech
+                    and not token.is_stop  # Token is not a stopword
+                    and not token.is_space
+                    and not token.is_punct
+                ):
+                    article_tokens.append(token.lemma_.lower())
+            tokenized_articles.append(article_tokens)
+        return tokenized_articles
 
     @staticmethod
     def fit_model(
