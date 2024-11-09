@@ -41,11 +41,6 @@ class TextService:
                     return_value = inner_last_p.split("/")
                 else:
                     return_value = [inner_last_p]
-
-                # sanity check, there should hopefully not be a broken up string
-                if len(return_value) > 3:
-                    print(return_value)
-
                 return return_value
             else:
                 return None
@@ -63,17 +58,28 @@ class TextService:
 
     @staticmethod
     def process_tags(df: pd.DataFrame) -> pd.DataFrame:
-        # Extract and remove lead text
+        ## Extraction 
+        # Extract lead tags
         df['lead_text'] = df['content'].str.extract(r'<ld>(.*?)</ld>', expand=False).str.replace(r'</?p[^>]*>', ' ',
                                                                                                  regex=True)
+
+        # Extract subheadings
+        df['subheadings'] = df['content'].str.extract(r'<zt>(.*?)</zt>', expand=False)
+
+        # Extract author full name
+        df['author'] = df['content'].str.extract(r'<au>(.*?)</au>', expand=False)
+
+        # Extract authors from the last <p> element if it matches the criteria
+        df['author_extracted'] = df['content'].apply(TextService.get_authors)
+        
+        ## Cleaning
+        # Remove lead tags
         df['content'] = df['content'].str.replace(r'<ld>.*?</ld>', ' ', regex=True)
 
-        # Extract and remove subheadings
-        df['subheadings'] = df['content'].str.extract(r'<zt>(.*?)</zt>', expand=False)
+        # Remove subheadings
         df['content'] = df['content'].str.replace(r'<zt>.*?</zt>', ' ', regex=True)
 
-        # Extract and remove author full name
-        df['author'] = df['content'].str.extract(r'<au>(.*?)</au>', expand=False)
+        # Remove author tags
         df['content'] = df['content'].str.replace(r'<au>.*?</au>', ' ', regex=True)
 
         # Remove tags but keep annotated text within <a> tags
@@ -81,9 +87,6 @@ class TextService:
 
         # Remove <tx>, <p>, <br>, <ka>, and <lg> tags
         df['content'] = df['content'].str.replace(r'</?(tx|p|br|ka|lg)[^>]*>', ' ', regex=True)
-
-        # Extract authors from the last <p> element if it matches the criteria
-        df['author_extracted'] = df['content'].apply(TextService.get_authors)
 
         # Remove the author from the text
         df['content'] = df['content'].apply(TextService.remove_author_from_string_end)
