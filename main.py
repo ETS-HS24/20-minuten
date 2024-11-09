@@ -59,7 +59,7 @@ if __name__ == "__main__":
         logger.info("Recreating lemmatized dataset.")
         ########## Lemmatize Data #########
         lemmatized_articles_df = TextService.lemmatize_content_nltk(df=cleaned_articles_df, column_to_process="content")
-        lemmatized_articles_df = TextService.lemmatize_content_from_dictionary(df=lemmatized_articles_df)
+        #lemmatized_articles_df = TextService.lemmatize_content_from_dictionary(df=lemmatized_articles_df) # NOTE: Not sure I understand this function. Can this be integrated in the one before so everything happens in one pass?
         FileService.df_to_parquet(lemmatized_articles_df, 'articles_lemmatized')
         _previous_step_recreate = True
     else:
@@ -96,8 +96,6 @@ if __name__ == "__main__":
                                                        num_topics=number_of_topics, dataset_passes=ds_passes)
     french_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=french_model, n_top_words=10)
     model_path = TopicModellingService.save_gensim_model(model=french_model, language="french")
-    model1 = TopicModellingService.load_gensim_model(language="french")
-    model2 = TopicModellingService.load_gensim_model(full_model_path=model_path)
 
     FileService.df_to_csv(df=french_top_words_per_topic, file_name="topics_fr")
 

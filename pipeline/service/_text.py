@@ -1,6 +1,7 @@
 import os
 
 import pandas as pd
+import numpy as np
 import spacy
 from bs4 import BeautifulSoup
 from typing import List
@@ -110,38 +111,41 @@ class TextService:
         nlp_de = spacy.load("de_core_news_sm")
         nlp_fr = spacy.load("fr_core_news_sm")
 
-        custom_stop_words: set = {
-            " ", "\x96", "the", "to", "of", "20", "minuten",
-        }
-
         with open(os.path.normpath("./analysis/german_stopwords_full.txt"), "r") as file:
             german_stop_words_full = file.read().splitlines()
 
         with open(os.path.normpath("./analysis/french_stopwords_full.txt"), "r") as file:
             french_stop_words_full = file.read().splitlines()
 
-        german_stop_words = set(stopwords.words("german")) | set(german_stop_words_full) | custom_stop_words
-        french_stop_words = set(stopwords.words("french")) | set(french_stop_words_full) | custom_stop_words
+        german_stop_words = set(stopwords.words("german")) | set(german_stop_words_full) 
+        french_stop_words = set(stopwords.words("french")) | set(french_stop_words_full) 
 
         nlp_de.Defaults.stop_words |= german_stop_words
         nlp_fr.Defaults.stop_words |= french_stop_words
 
-        def lemmatize_text(doc: str, lang: str):
+        def lemmatize_text(documents: pd.Series, lang: str):
+            articles = []
             if lang == "fr":
-                doc = nlp_fr(doc, disable=["senter","attribute_ruler","ner"])
-                lemmatized_article = [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
-
+                for doc in tqdm(nlp_fr.pipe(documents, disable=["senter","attribute_ruler","ner"], n_process=8), total=len(documents)):
+                    lemmatized_article = " ".join([token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct])
+                    articles.append(lemmatized_article)
             else:
-                doc = nlp_de(text=doc, disable=["senter","attribute_ruler","ner"])
-                lemmatized_article = [token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct]
+                for doc in tqdm(nlp_de.pipe(documents, disable=["senter","attribute_ruler","ner"], n_process=8), total=len(documents)):
+                    lemmatized_article = " ".join([token.lemma_.lower() for token in doc if not token.is_stop and not token.is_punct])
+                    articles.append(lemmatized_article)
+            
+            return pd.Series(data=lemmatized_article, index=documents.index, dtype=documents.dtype)
 
+        mask_d = (df['language'] == "de")
+        mask_f = (df['language'] == "fr")
 
-            return ' '.join(lemmatized_article)
+        masked_column_de = df[mask_d][column_to_process]
+        masked_column_fr = df[mask_f][column_to_process]
 
-        tqdm.pandas()
-        df[f"{column_to_process}_lemmatized"] = df.progress_apply(
-            lambda x: pd.Series(lemmatize_text(x[column_to_process], x["language"])), axis=1
-        )
+        df[f"{column_to_process}_lemmatized"] = np.nan
+        df[f"{column_to_process}_lemmatized"] = df[f"{column_to_process}_lemmatized"].astype(df[column_to_process].dtype)
+        df.loc[mask_d, f"{column_to_process}_lemmatized"] = lemmatize_text(masked_column_de, "de")
+        df.loc[mask_f, f"{column_to_process}_lemmatized"] = lemmatize_text(masked_column_fr, "fr")
         return df
 
     @staticmethod
