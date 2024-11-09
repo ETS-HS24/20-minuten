@@ -74,21 +74,18 @@ class TopicModelingService:
             dataset_passes=5,
             technique: str = 'lda',
     ):
+        assert technique, "Specify technique either 'lda' or 'lsa'"
         processed_texts = TopicModelingService.preprocess(texts, language)
-        model = None
         logger.info(f"Fitting {technique.upper()} for {language}.")
         dictionary = corpora.Dictionary(processed_texts)
         logger.info(f"Created dictionary with {len(dictionary)} entries.")
-
         corpus = [dictionary.doc2bow(text) for text in processed_texts]
         logger.info(f"Applying TFIDF to create a corpus, why?")
-
         logger.info(f"Fit online {technique.upper()} with {dataset_passes}")
         if technique == 'lda':
             model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
-        elif technique == 'lsa':
+        else:
             model = LsiModel(corpus, num_topics=num_topics, id2word=dictionary)
-
         return model, corpus, dictionary
 
     @staticmethod
