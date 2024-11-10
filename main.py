@@ -29,8 +29,13 @@ if __name__ == "__main__":
             or force_recreate
             or _previous_step_recreate
     ):
+        length_threshold = 400
         logger.info(f"Recreating raw parquet.")
         articles_df = FileService.read_tsv_to_df(file_path)
+        count_raw_articles = len(articles_df)
+        articles_df = articles_df[(articles_df["char_count"] > 400 )]        
+        logger.info(f"Removed {count_raw_articles-len(articles_df)} articles because they have fewer than {length_threshold} characters.")
+
         FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
         _previous_step_recreate = True
     else:
