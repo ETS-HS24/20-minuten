@@ -1,0 +1,1 @@
+{"n_neighbors": [20, 25, 30, 35], "n_components": [6, 7, 10, 13, 17], "umap_metric": ["hellinger", "cosine"], "min_cluster_size": [10, 15, 20], "hdbscan_metric": ["euclidean"], "cluster_selection_method": ["eom"]}

@@ -28,3 +28,5 @@ torch
 sentence-transformers
 
 regex
+top2vec[sentence_transformers]
+hyperopt
