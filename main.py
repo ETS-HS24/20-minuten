@@ -88,6 +88,7 @@ if __name__ == "__main__":
     number_of_topics = 50
     number_of_top_words = 5
     ds_passes = 2
+    random_state = 22
     match_score = 0.9
 
     # Data
@@ -99,8 +100,8 @@ if __name__ == "__main__":
     # french_series = french_series.iloc[:number_of_articles]['content']
 
     # Take random
-    german_series = german_series.sample(n=number_of_articles)['content']
-    french_series = french_series.sample(n=number_of_articles)['content']
+    german_series = german_series.sample(n=number_of_articles, random_state=random_state)['content']
+    french_series = french_series.sample(n=number_of_articles, random_state=random_state)['content']
 
 
     ### LSA ###
