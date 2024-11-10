@@ -74,7 +74,8 @@ class TopicModelingService:
             dataset_passes=5,
             technique: str = 'lda',
     ):
-        assert technique, "Specify technique either 'lda' or 'lsa'"
+        valid_models = ["lda", "lsa"]
+        assert technique in valid_models, f"Please provide a valid model from: {valid_models}"
         processed_texts = TopicModelingService.preprocess(texts, language)
         logger.info(f"Fitting {technique.upper()} for {language}.")
         dictionary = corpora.Dictionary(processed_texts)
