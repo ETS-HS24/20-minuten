@@ -26,6 +26,7 @@ gensim
 
 torch
 sentence-transformers
+deep_translator
 
 regex
 top2vec[sentence_transformers]
