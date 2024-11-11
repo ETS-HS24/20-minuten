@@ -25,8 +25,8 @@ class TopicMatcherService:
         result = []
         corpus_embedding = model.encode(corpus, convert_to_tensor=True, normalize_embeddings=True)
         top_k = min(number_of_top, len(corpus))
-        for query in queries:
-            query_embedding = model.encode(query, convert_to_tensor=True, normalize_embeddings=True)
+        query_embeddings = model.encode(queries, convert_to_tensor=True, normalize_embeddings=True)
+        for query, query_embedding in zip(queries, query_embeddings):
             hits = util.semantic_search(query_embedding, corpus_embedding, score_function=util.dot_score)
             hits = hits[0]
             hit_list.append(hits)
