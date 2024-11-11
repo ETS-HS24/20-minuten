@@ -1,9 +1,10 @@
 import glob
 import os
 import sys
+import pandas as pd
 import logging
 from pathlib import Path
-from pipeline.service import FileService, SentimentService, TextService, TopicModellingService, TopicMatcherService
+from pipeline.service import FileService, SentimentService, TextService, TopicModelingService, TopicMatcherService
 
 if __name__ == "__main__":
     logging.basicConfig(stream=sys.stdout,
@@ -19,10 +20,7 @@ if __name__ == "__main__":
 
     matching_files = glob.glob(search_pattern, recursive=True)
 
-    if matching_files:
-        file_path = matching_files[0]
-    else:
-        file_path = FileService.default_processed_path
+    file_path = matching_files[0]
 
     if (
             not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()
@@ -85,42 +83,82 @@ if __name__ == "__main__":
         logger.info("Not recreating sentiment analysis.")
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
-    #sys.exit()
-    ############# Topic Modelling #############
+    ############# Topic Modeling #############
     number_of_articles = 1000
-    number_of_topics = 100
-    number_of_top_words = 10
+    number_of_topics = 50
+    number_of_top_words = 5
     ds_passes = 2
+    random_state = 22
+    match_score = 0.9
+
+    # Data
+    french_series = sentiment_df[sentiment_df['language'] == 'fr']
+    german_series = sentiment_df[sentiment_df['language'] == 'de']
+
+    # First rows
+    # german_series = german_series.iloc[:number_of_articles]['content']
+    # french_series = french_series.iloc[:number_of_articles]['content']
+
+    # Take random
+    german_series = german_series.sample(n=number_of_articles, random_state=random_state)['content']
+    french_series = french_series.sample(n=number_of_articles, random_state=random_state)['content']
+
+
+    ### LSA ###
+    logger.info("LSA")
 
     # French
-    french_series = sentiment_df[sentiment_df['language'] == 'fr'].iloc[:number_of_articles]['content']
-    #french_series = sentiment_df[sentiment_df['language'] == 'fr']['content']
-    french_model, _, _ = TopicModellingService.fit_lda(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes)
-    french_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=french_model, n_top_words=number_of_top_words)
-    #model_path = TopicModellingService.save_gensim_model(model=french_model, language="french")
-    #model1 = TopicModellingService.load_gensim_model(language="french")
-    #model2 = TopicModellingService.load_gensim_model(full_model_path=model_path)
-
-    FileService.df_to_csv(df=french_top_words_per_topic, file_name="topics_fr")
-
-    df_topics_fr = french_top_words_per_topic
-    print(df_topics_fr)
+    french_lsa_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
+    df_lsa_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lsa_model, n_top_words=number_of_top_words, technique='lsa')
+    FileService.df_to_csv(df=df_lsa_topics_fr, file_name="lsa_topics_fr")
 
     # German
-    german_series = sentiment_df[sentiment_df['language'] == 'de'].iloc[:number_of_articles]['content']
-    #german_series = sentiment_df[sentiment_df['language'] == 'de']['content']
-    german_model, _, _ = TopicModellingService.fit_lda(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes)
-    german_top_words_per_topic = TopicModellingService.lda_top_words_per_topic(model=german_model, n_top_words=number_of_top_words)
-    #model_path = TopicModellingService.save_gensim_model(model=german_model, language="german")
+    german_lsa_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lsa')
+    df_lsa_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lsa_model, n_top_words=number_of_top_words, technique='lsa')
+    FileService.df_to_csv(df=df_lsa_topics_de, file_name="lsa_topics_de")
 
-    FileService.df_to_csv(df=german_top_words_per_topic, file_name="topics_de")
+    # Matching topics Query: French / Corpus: German
+    best_lsa_matches_by_sentence_transformer_fr_de, lsa_df_by_sentence_transformer_fr_de, _, _, _ = TopicMatcherService.match_by_sentence_transformer(df_lsa_topics_de['word'], df_lsa_topics_fr['word'], number_of_top=number_of_top_words, match_score=match_score)
 
-    df_topics_de = german_top_words_per_topic
-    print(df_topics_de)
+    # Matching topics Query: German / Corpus: French
+    best_lsa_matches_by_sentence_transformer_de_fr, lsa_df_by_sentence_transformer_de_fr, _, _, _ = TopicMatcherService.match_by_sentence_transformer(df_lsa_topics_fr['word'], df_lsa_topics_de['word'], number_of_top=number_of_top_words, match_score=match_score, invert=True)
 
-    # Matching topics German / French
-    best_matches, hit_list, corpus_embedding, top_k = TopicMatcherService.match(df_topics_de['Word'], df_topics_fr['Word'], number_of_top=number_of_top_words, match_score=0.9, print_matches=True)
-    print(best_matches.drop_duplicates())
-    # print(hit_list)
-    # print(corpus_embedding)
-    # print(top_k)
+    # Concat and store in csv
+    best_lsa_matches_by_sentence_transformer = pd.concat([best_lsa_matches_by_sentence_transformer_de_fr, best_lsa_matches_by_sentence_transformer_fr_de])
+    lsa_df_by_sentence_transformer = pd.concat([lsa_df_by_sentence_transformer_fr_de, lsa_df_by_sentence_transformer_de_fr])
+    FileService.df_to_csv(df=best_lsa_matches_by_sentence_transformer, file_name="best_lsa_matches_by_sentence_transformer")
+    FileService.df_to_csv(df=lsa_df_by_sentence_transformer, file_name="lsa_df_by_sentence_transformer")
+
+    # Matching by translation
+    lsa_matches_by_translation, lsa_german_counts, lsa_french_counts = TopicMatcherService.match_by_translation(df_lsa_topics_de['word'], df_lsa_topics_fr['word'])
+    FileService.df_to_csv(df=lsa_matches_by_translation, file_name="lsa_matches_by_translation")
+
+
+    ### LDA ###
+    logger.info("LDA")
+
+    # French
+    french_lda_model, _, _ = TopicModelingService.fit_model(texts=french_series, language="french", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
+    df_lda_topics_fr = TopicModelingService.get_top_words_per_topic(model=french_lda_model, n_top_words=number_of_top_words, technique='lda')
+    FileService.df_to_csv(df=df_lda_topics_fr, file_name="lda_topics_fr")
+
+    # German
+    german_lda_model, _, _ = TopicModelingService.fit_model(texts=german_series, language="german", num_topics=number_of_topics, dataset_passes=ds_passes, technique='lda')
+    df_lda_topics_de = TopicModelingService.get_top_words_per_topic(model=german_lda_model, n_top_words=number_of_top_words, technique='lda')
+    FileService.df_to_csv(df=df_lda_topics_de, file_name="lda_topics_de")
+
+    # Matching topics Query: French / Corpus: German
+    best_lda_matches_by_sentence_transformer_fr_de, lda_df_by_sentence_transformer_fr_de, _, _, _ = TopicMatcherService.match_by_sentence_transformer(df_lda_topics_de['word'], df_lda_topics_fr['word'], number_of_top=number_of_top_words, match_score=match_score)
+
+    # Matching topics Query: German / Corpus: French
+    best_lda_matches_by_sentence_transformer_de_fr, lda_df_by_sentence_transformer_de_fr, _, _, _ = TopicMatcherService.match_by_sentence_transformer(df_lda_topics_fr['word'], df_lda_topics_de['word'], number_of_top=number_of_top_words, match_score=match_score, invert=True)
+
+    # Concat and store in csv
+    best_lda_matches_by_sentence_transformer = pd.concat([best_lda_matches_by_sentence_transformer_de_fr, best_lda_matches_by_sentence_transformer_fr_de])
+    lda_df_by_sentence_transformer = pd.concat([lda_df_by_sentence_transformer_fr_de, lda_df_by_sentence_transformer_de_fr])
+    FileService.df_to_csv(df=best_lda_matches_by_sentence_transformer, file_name="best_lda_matches_by_sentence_transformer")
+    FileService.df_to_csv(df=lda_df_by_sentence_transformer, file_name="lda_df_by_sentence_transformer")
+
+    # Matching by translation
+    lda_matches_by_translation, lda_german_counts, lda_french_counts = TopicMatcherService.match_by_translation(df_lda_topics_de['word'], df_lda_topics_fr['word'])
+    FileService.df_to_csv(df=lda_matches_by_translation, file_name="lda_matches_by_translation")

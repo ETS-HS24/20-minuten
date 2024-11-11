@@ -4,14 +4,12 @@ import nltk
 import spacy
 from spacy.cli.download import download as spacy_download
 from gensim import corpora
-from gensim.models import LdaModel
-from nltk.corpus import stopwords
+from gensim.models import LdaModel, LsiModel
 from nltk.stem import WordNetLemmatizer
 from pathlib import Path
 import os
 import datetime
 import glob
-import urllib.request
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +20,7 @@ for nltk_data in ["stopwords", "wordnet"]:
         logger.info(f"NLTK data {nltk_data} found locally, not downloading.")
     except LookupError:
         logger.info(f"NLTK data {nltk_data} not found... downloading it.")
-        nltk.download(nltk_data)
+        nltk.download(nltk_data, quiet=True)
 
 # Initialize spacy model and lemmatizer
 try:
@@ -45,65 +43,56 @@ lemmatizer = WordNetLemmatizer()
 # python -m spacy download fr_core_news_sm
 # python -m spacy download de_core_news_sm
 
-class TopicModellingService:
+class TopicModelingService:
     default_model_path: str = './models'
-
-    custom_stopwords: set = {
-        " ", "\x96", "the", "to", "of", "20", "minuten",
-    }
-
-    stopwords_german_full_url: str = 'https://raw.githubusercontent.com/solariz/german_stopwords/refs/heads/master/german_stopwords_full.txt'
-    stopwords_french_full_url: str = 'https://raw.githubusercontent.com/stopwords-iso/stopwords-fr/refs/heads/master/stopwords-fr.txt'
 
     @staticmethod
     def preprocess(corpus, language='german'):
-        logger.info(f"Preprocessing {len(corpus)} texts for topic modelling.")
-
-        # Stop words
-        stopwords_url = TopicModellingService.stopwords_german_full_url if language == 'german' else TopicModellingService.stopwords_french_full_url
-        with urllib.request.urlopen(stopwords_url) as f:
-            stopwords_full = f.read().decode('utf-8')
-        stop_words = set(stopwords.words(language)) | set(stopwords_full) | TopicModellingService.custom_stopwords
-
-        processed_texts = []
+        logger.info(f"Preprocessing {len(corpus)} texts for topic modeling.")
+        pos_to_remove = ["ADP", "ADV", "AUX", "CCONJ", "DET", "INTJ", "NUM", "PART", "PRON", "PUNCT", "SCONJ", "SYM"]
         nlp = nlp_de if language == 'german' else nlp_fr
-
-        for doc in corpus:
-            # Tokenize the document
-            doc = nlp(str(doc).lower())  # Lowercase and tokenize
-            tokens = [token.text for token in doc if not token.is_stop and not token.is_punct]
-
-            # Lemmatize words and remove stopwords
-            lemmatized_tokens = [lemmatizer.lemmatize(token) for token in tokens if token not in stop_words]
-
-            processed_texts.append(lemmatized_tokens)
-
-        return processed_texts
+        articles = nlp.pipe(corpus, disable=["tagger", "ner", "textcat"], n_process=4)
+        tokenized_articles = []
+        for article in articles:
+            article_tokens = []
+            for token in article:
+                if (
+                    token.pos_ not in pos_to_remove  # Remove defined parts of speech
+                    and not token.is_stop  # Token is not a stopword
+                    and not token.is_space
+                    and not token.is_punct
+                ):
+                    article_tokens.append(token.lemma_.lower())
+            tokenized_articles.append(article_tokens)
+        return tokenized_articles
 
     @staticmethod
-    def fit_lda(
+    def fit_model(
             texts,
             language,
             num_topics=5,
-            dataset_passes=5
+            dataset_passes=5,
+            technique: str = 'lda',
     ):
-        processed_texts = TopicModellingService.preprocess(texts, language)
-
-        logger.info(f"Fitting LDA for {language}.")
+        valid_models = ["lda", "lsa"]
+        assert technique in valid_models, f"Please provide a valid model from: {valid_models}"
+        processed_texts = TopicModelingService.preprocess(texts, language)
+        logger.info(f"Fitting {technique.upper()} for {language}.")
         dictionary = corpora.Dictionary(processed_texts)
         logger.info(f"Created dictionary with {len(dictionary)} entries.")
-
         corpus = [dictionary.doc2bow(text) for text in processed_texts]
         logger.info(f"Applying TFIDF to create a corpus, why?")
-
-        logger.info(f"Fit online LDA with {dataset_passes}")
-        lda_model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
-
-        return lda_model, corpus, dictionary
+        logger.info(f"Fit online {technique.upper()} with {dataset_passes}")
+        if technique == 'lda':
+            model = LdaModel(corpus, num_topics=num_topics, id2word=dictionary, passes=dataset_passes)
+        else:
+            model = LsiModel(corpus, num_topics=num_topics, id2word=dictionary)
+        return model, corpus, dictionary
 
     @staticmethod
     def save_gensim_model(
-            model: LdaModel,
+            model: LdaModel | LsiModel,
+            technique: str = 'lda',
             language: str | None = None,
             model_name: str | None = None,
             model_folder: str = default_model_path
@@ -117,7 +106,7 @@ class TopicModellingService:
 
             now = datetime.datetime.now()
             timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
-            model_name = f"lda-model-{language}-{timestamp}-{model.num_topics}topics-{len(model.id2word)}dictsize"
+            model_name = f"{technique}-model-{language}-{timestamp}-{model.num_topics}topics-{len(model.id2word)}dictsize"
 
         model_path = os.path.join(model_folder, model_name)
 
@@ -131,28 +120,31 @@ class TopicModellingService:
     @staticmethod
     def load_gensim_model(
             language: str | None = None,
+            technique: str = 'lda',
             full_model_path: str | None = None,
             default_model_folder: str | None = default_model_path
-    ) -> LdaModel:
-
+    ) -> LdaModel | LsiModel:
         if not full_model_path:
             assert language, f"If full_model_path is not set you must set the language."
             assert default_model_folder, f"If full_model_path is not set you must set the default_model_folder"
 
-            all_models = glob.glob(os.path.join(default_model_folder, f"lda-model-{language}-*"), recursive=True)
+            all_models = glob.glob(os.path.join(default_model_folder, f"{technique}-model-{language}-*"), recursive=True)
             logger.info(f"Found {len(all_models)} models for {language}. Loading most recent one.")
             full_model_path = all_models[-1]
 
         assert not full_model_path.endswith("model"), "Provide the path to the folder, don't append 'model'."
-
-        return LdaModel.load(os.path.join(full_model_path, "model"))
+        model_name = os.path.join(full_model_path, "model")
+        if technique == 'lda':
+            return LdaModel.load(model_name)
+        elif technique == 'lsa':
+            return LsiModel.load(model_name)
 
     @staticmethod
-    def lda_top_words_per_topic(model, n_top_words):
+    def get_top_words_per_topic(model, n_top_words, technique: str = 'lda'):
         top_words_per_topic = []
         for topic_id in range(model.num_topics):
             top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])
-        return pd.DataFrame(top_words_per_topic, columns=["Topic", "Word", "Probability"])
+        return pd.DataFrame(top_words_per_topic, columns=["topic", "word", "probability" if technique == 'lda' else "weight"])
 
 
 if __name__ == '__main__':

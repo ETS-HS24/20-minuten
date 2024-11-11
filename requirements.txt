@@ -26,5 +26,6 @@ gensim
 
 torch
 sentence-transformers
+deep_translator
 
 regex
