@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 import pandas as pd
 import logging
 import nltk
@@ -10,6 +11,14 @@ from pathlib import Path
 import os
 import datetime
 import glob
+from tqdm import tqdm
+from typing import List, Type
+from sentence_transformers import SentenceTransformer
+from top2vec import Top2Vec
+import numpy as np
+
+tqdm.pandas()
+
 
 logger = logging.getLogger(__name__)
 
@@ -145,7 +154,141 @@ class TopicModelingService:
         for topic_id in range(model.num_topics):
             top_words_per_topic.extend([(topic_id,) + x for x in model.show_topic(topic_id, topn=n_top_words)])
         return pd.DataFrame(top_words_per_topic, columns=["topic", "word", "probability" if technique == 'lda' else "weight"])
+    
+    @staticmethod
+    def fit_top2vec_model(
+            data_column:pd.Series|list,
+            transformer_name:str|os.PathLike = "sentence-transformers/LaBSE",
+            umap_args:dict|None=None,
+            hdbscan_args:dict|None=None,
+        ) -> Top2Vec:
+        logging.info(f"Fitting top2vec model on a corpus of {len(data_column)} documents.")
+        assert len(data_column) > 0, "Empty data provided. Please provide samples in a list or Pandas data frame."
 
+        original_env = os.environ.copy()
+        os.environ["TOKENIZERS_PARALLELISM"] = "true"
+
+        logging.debug(f"Loading model: {transformer_name}")
+        pretrained_model = SentenceTransformer(str(transformer_name))
+
+        logging.debug(f"Fitting Top2Vec pipeline to {len(data_column)} samples.")
+        model = Top2Vec(
+            documents=list(data_column), 
+            embedding_model=pretrained_model.encode, 
+            chunk_length=pretrained_model.max_seq_length, 
+            chunk_overlap_ratio=.2,
+            gpu_umap=False,
+            umap_args=umap_args,
+            gpu_hdbscan=False,
+            hdbscan_args=hdbscan_args,
+            speed="learn", 
+            workers=4,
+            verbose=True
+        )
+        logging.info(f"Model found {model.get_num_topics()} topics.")
+        logging.debug(f"Finished fitting Top2Vec model, thanks for waiting.")
+
+        # Reset original environment
+        os.environ = original_env
+        return model
+
+    @staticmethod
+    def save_top2vec_model(
+        model:Top2Vec,
+        model_save_path:str|os.PathLike|None,
+        force_overwrite:bool=False
+    ) -> Path:
+        now = datetime.datetime.now()
+        timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
+
+        if not model_save_path:
+            logging.info("No model name given, generating default name.")
+            model_save_path = Path(os.path.join(TopicModelingService.default_model_path, "top2vec", f"top2vec-{model.get_num_topics()}topics-{timestamp}"))
+        
+        save_path = Path(os.path.normpath(model_save_path))
+        if not save_path.parent.exists():
+            logging.info(f"Path for {save_path} does not exist, creating.")
+            save_path.mkdir(parents=True, exist_ok=True)
+
+        if not force_overwrite and save_path.exists():
+            logging.warning(f"Model already exists, appending timestamp to modelname")
+            new_path = save_path.with_suffix(timestamp)
+            save_path.rename(new_path)
+
+        model.save(save_path)
+        return save_path
+
+    @staticmethod
+    def save_top2vec_embeddings(
+        model:Top2Vec,
+        embeddings_save_path:str|os.PathLike|None,
+        force_overwrite:bool=False
+    ) -> Path:
+        now = datetime.datetime.now()
+        timestamp = now.strftime('%Y-%m-%d-%H-%M-%S')
+
+        embeddings = model.document_vectors
+
+        if not embeddings_save_path:
+            embeddings_save_path = Path(os.path.join(TopicModelingService.default_model_path, "vectorspaces", f"top2vec-embeddings-{model.get_num_topics()}topics-{len(embeddings)}documents-{timestamp}.npy"))
+        
+        save_path = Path(os.path.normpath(embeddings_save_path))
+        if not save_path.parent.exists():
+            logging.info(f"Path for {save_path} does not exist, creating.")
+            save_path.mkdir(parents=True, exist_ok=True)
+
+        if not force_overwrite and save_path.exists():
+            logging.warning(f"Embedding already exists, appending timestamp to modelname")
+            new_path = save_path.with_suffix(timestamp)
+            save_path.rename(new_path)
+
+        np.save(save_path, embeddings)
+        model.save(save_path)
+        return save_path
+    
+    @staticmethod
+    def load_top2vec_model(
+        model_path:str|os.PathLike,
+        transformer_name:str|os.PathLike = "sentence-transformers/LaBSE",
+    ) -> Top2Vec:
+        load_path = Path(model_path)
+        assert load_path.exists(), "The model path does not exist."
+
+        logging.info(f"Loading {transformer_name} and top2vec from {model_path}.")
+        pretrained_model = SentenceTransformer(str(transformer_name), device="cuda")
+        model = Top2Vec.load(load_path)
+        model.set_embedding_model(pretrained_model.encode)
+        
+        # Mark model as loaded from disk
+        model._loaded_from_disk = SimpleNamespace()
+        model._loaded_from_disk = True
+
+        return model
+
+
+    @staticmethod
+    def predict_or_get_top2vec_topics(
+        model:Top2Vec,
+        series:pd.Series,
+        num_topics:int=1
+    ) -> pd.Series:
+        
+        def get_topics(article:str) -> List[int]:
+            topic_words, word_scores, topic_scores, topic_nums = model.query_topics(query=article, num_topics=num_topics)
+            return topic_nums.tolist()
+
+        if model._loaded_from_disk: #type: ignore
+            # Very slow but guarantees that there is no data/prediction mismatch.
+            logging.warning(f"Calculating topics because it is indicated that the model has been loaded from disk.")
+            logging.warning(f"This will take some time to calculate... If you know what you are doing you can set `model._loaded_from_disk = False`")
+            logging.warning(f"This might risk a document/topic row missmatch, I hope you know what you are doing.")
+            topics = series.progress_apply(lambda row: get_topics(row))
+        else:
+            logging.warning(f"Loading topics directly from the model. Did you make sure that you are attaching the generated topics to the right dataset?")
+            topic_nums, topic_score, topics_words, word_scores = model.get_documents_topics(model.document_ids, num_topics=2)
+            topics = pd.Series(topic_nums.tolist())
+
+        return topics
 
 if __name__ == '__main__':
     pass

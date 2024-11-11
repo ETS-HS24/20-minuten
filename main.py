@@ -31,7 +31,8 @@ if __name__ == "__main__":
         logger.info(f"Recreating raw parquet.")
         articles_df = FileService.read_tsv_to_df(file_path)
         count_raw_articles = len(articles_df)
-        articles_df = articles_df[(articles_df["char_count"] > 400 )]        
+        length_threshold = 400
+        articles_df = articles_df[(articles_df["char_count"] > length_threshold )]        
         logger.info(f"Removed {count_raw_articles-len(articles_df)} articles because they have fewer than {length_threshold} characters.")
 
         FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
@@ -87,6 +88,36 @@ if __name__ == "__main__":
     else:
         logger.info("Not recreating sentiment analysis.")
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
+
+    # Embedding modeling
+    top2vec_model_path = "./models/top2vec/labse-three-year"
+    if (
+            not Path(top2vec_model_path).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
+        top2vec_model = TopicModelingService.fit_top2vec_model(data_column=sentiment_df["content"])
+        model_path = TopicModelingService.save_top2vec_model(model=top2vec_model, model_save_path=None)
+
+    else:
+        logger.info(f"Not refitting the top2vec LaBSE model... loading from {top2vec_model_path}")
+        top2vec_model = TopicModelingService.load_top2vec_model(model_path=top2vec_model_path)
+        
+        # verify dataset between different users, speed up.
+        if list(top2vec_model.document_ids) == list(range(len(sentiment_df.index))):
+            top2vec_model._loaded_from_disk = False # type:ignore -> monkeypatched in for validation
+
+    # Predict topics
+    if (
+            not Path(FileService.get_parquet_path(file_name='articles_topic')).exists()
+            or force_recreate
+            or _previous_step_recreate
+    ):
+        sentiment_df["topics"] = TopicModelingService.predict_or_get_top2vec_topics(model=top2vec_model, series=sentiment_df["content"], num_topics=1)
+        FileService.df_to_parquet(sentiment_df, 'articles_topic')
+    else:
+        logger.info("Not recalculating topics, loading articles_topic.parquet")
+        sentiment_df = FileService.read_parquet_to_df(file_name='articles_topic')
 
     ############# Topic Modeling #############
     number_of_articles = 1000
