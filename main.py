@@ -12,6 +12,7 @@ if __name__ == "__main__":
                         format='%(asctime)s | [%(filename)s:%(lineno)d] %(levelname)s | %(message)s')
     logger = logging.getLogger(__name__)
 
+    ######## Pipeline Settings #########
     force_recreate = False
     _previous_step_recreate = False
 
@@ -20,8 +21,14 @@ if __name__ == "__main__":
 
     matching_files = glob.glob(search_pattern, recursive=True)
 
-    top2vec_model_path = "./models/top2vec/labse-three-year-optimized"
+    file_path = matching_files[1]
 
+    ######## Top2Vec Topic Modeling #########
+    article_length_threshold = 400 # Remove documents that have fewer characters than this threshold
+    top2vec_model_path = "./models/top2vec/labse-three-year-optimized"
+    n_topics_per_article = 2 # Top #n topics per article that are returned
+
+    # Parameters optimized via ./analysis/optimize-top2vec-model.ipynb
     umap_args = {
         "n_neighbors": 40,
         "n_components": 5,
@@ -33,18 +40,24 @@ if __name__ == "__main__":
         'cluster_selection_method': "eom",
     }
 
+    ############# Topic Modeling, LSA & LDA #############
+    number_of_articles = 1000
+    number_of_topics = 50
+    number_of_top_words = 5
+    ds_passes = 2
+    random_state = 22
+    match_score = 0.9
+
     if (
             not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()
             or force_recreate
             or _previous_step_recreate
     ):
-        length_threshold = 400
         logger.info(f"Recreating raw parquet.")
         articles_df = FileService.read_tsv_to_df(file_path)
         count_raw_articles = len(articles_df)
-        length_threshold = 400
-        articles_df = articles_df[(articles_df["char_count"] > length_threshold )]        
-        logger.info(f"Removed {count_raw_articles-len(articles_df)} articles because they have fewer than {length_threshold} characters.")
+        articles_df = articles_df[(articles_df["char_count"] > article_length_threshold )]        
+        logger.info(f"Removed {count_raw_articles-len(articles_df)} articles because they have fewer than {article_length_threshold} characters.")
 
         FileService.df_to_parquet(df=articles_df, file_name='articles_raw')
         _previous_step_recreate = True
@@ -123,19 +136,11 @@ if __name__ == "__main__":
             or force_recreate
             or _previous_step_recreate
     ):
-        sentiment_df["topics"] = TopicModelingService.predict_or_get_top2vec_topics(model=top2vec_model, series=sentiment_df["content"], num_topics=1)
+        sentiment_df["topics"] = TopicModelingService.predict_or_get_top2vec_topics(model=top2vec_model, series=sentiment_df["content"], num_topics=n_topics_per_article)
         FileService.df_to_parquet(sentiment_df, 'articles_topic')
     else:
         logger.info("Not recalculating topics, loading articles_topic.parquet")
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_topic')
-
-    ############# Topic Modeling #############
-    number_of_articles = 1000
-    number_of_topics = 50
-    number_of_top_words = 5
-    ds_passes = 2
-    random_state = 22
-    match_score = 0.9
 
     # Data
     french_series = sentiment_df[sentiment_df['language'] == 'fr']
