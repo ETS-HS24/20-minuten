@@ -1,0 +1,31 @@
+query:
+  sources:
+    - ZWA
+    - ZWAS
+  dates:
+    - from: 2020-01-01
+      to: 2023-12-31
+  languages:
+    - fr
+    - de
+result:
+  format: TSV
+  maxResults: 10000000
+  columns:
+    - id
+    - pubtime
+    - medium_code
+    - medium_name
+    - rubric
+    - regional
+    - doctype
+    - doctype_description
+    - language
+    - char_count
+    - dateline
+    - head
+    - subhead
+    - article_link
+    - content_id
+    - content
+version: 1.2
