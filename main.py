@@ -20,7 +20,18 @@ if __name__ == "__main__":
 
     matching_files = glob.glob(search_pattern, recursive=True)
 
-    file_path = matching_files[0]
+    top2vec_model_path = "./models/top2vec/labse-three-year-optimized"
+
+    umap_args = {
+        "n_neighbors": 40,
+        "n_components": 5,
+        "metric": "cosine",
+    }
+    hdbscan_args = {
+        'min_cluster_size': 20,
+        'metric': "euclidean",
+        'cluster_selection_method': "eom",
+    }
 
     if (
             not Path(FileService.get_parquet_path(file_name='articles_raw')).exists()

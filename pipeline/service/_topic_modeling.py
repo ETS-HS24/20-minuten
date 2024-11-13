@@ -212,7 +212,7 @@ class TopicModelingService:
 
         if not force_overwrite and save_path.exists():
             logging.warning(f"Model already exists, appending timestamp to modelname")
-            new_path = save_path.with_suffix(timestamp)
+            new_path = save_path.with_stem(f"{save_path.stem}-{timestamp}")
             save_path.rename(new_path)
 
         model.save(save_path)
@@ -286,7 +286,8 @@ class TopicModelingService:
         else:
             logging.warning(f"Loading topics directly from the model. Did you make sure that you are attaching the generated topics to the right dataset?")
             topic_nums, topic_score, topics_words, word_scores = model.get_documents_topics(model.document_ids, num_topics=2)
-            topics = pd.Series(topic_nums.tolist())
+            topics = pd.Series(topic_nums.tolist(), index=series.index)
+            print(f"Returning topics {np.count_nonzero(~np.isnan(topic_nums))} for {len(series)}.")
 
         return topics
 

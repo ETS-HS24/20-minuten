@@ -31,3 +31,4 @@ deep_translator
 regex
 top2vec[sentence_transformers]
 hyperopt
+polars[numpy, pandas, pyarrow, async, plot, style, timezone]
