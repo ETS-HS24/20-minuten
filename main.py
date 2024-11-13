@@ -128,7 +128,7 @@ if __name__ == "__main__":
         
         # verify dataset between different users, speed up.
         if list(top2vec_model.document_ids) == list(range(len(sentiment_df.index))):
-            top2vec_model._loaded_from_disk = False # type:ignore -> monkeypatched in for validation
+            top2vec_model._loaded_from_disk = False # type ignore -> monkeypatched in for validation
 
     # Predict topics
     if (
