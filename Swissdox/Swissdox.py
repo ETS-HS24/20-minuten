@@ -12,8 +12,8 @@ from jsonschema import validate, ValidationError
 
 class SwissdoxDataset:
     def __init__(self,
-                 dataset_name,
-                 query_file_path=None,
+                 dataset_name: str,
+                 query_file_path: str = None,
                  status_on_api=None,
                  default_folders=None
                  ):
@@ -37,12 +37,12 @@ class SwissdoxDataset:
         self.SCHEMA_CONFIG_PATH = os.path.normpath(
             os.path.join(Path(__file__).parent.resolve(), "schemas/available-schemas.yaml"))
 
-    def initialize_dataset(self, data_root_folder, validate_query_file=True, query_string=None):
+    def initialize_dataset(self, data_root_folder: str, validate_query_file: bool = True, query_string: str = None):
         """
         Initialize dataset from the given data root directory.
-        :param data_root_folder:
-        :param validate_query_file:
-        :param query_string:
+        :param str data_root_folder: data root folder path
+        :param bool validate_query_file: if to validate query file
+        :param str query_string: query string
         :return:
         """
         if data_root_folder:
@@ -85,23 +85,23 @@ class SwissdoxDataset:
         else:
             logging.info(f"No data root folder was provided so no existing dataset is expected.")
 
-    def create_query_file_from_string(self, data_root_folder, query_string):
+    def create_query_file_from_string(self, data_root_folder: str, query_string: str):
         """
         Create query file from string.
-        :param data_root_folder
-        :param query_string
+        :param str data_root_folder: data root folder path
+        :param str query_string: query string
         :return:
         """
         logging.info("Creating query file from string.")
         with open(os.path.join(data_root_folder, self.dataset_name, self.dataset_name + ".yaml"), "w") as query_file:
             query_file.write(query_string)
 
-    def validate_query(self, query, schema):
+    def validate_query(self, query: str, schema):
         """
         Validate query against schema.
-        :param query:
-        :param schema:
-        :return:
+        :param str query: query to validate
+        :param schema: check query against this schema
+        :return: bool
         """
         try:
             validate(query, schema=json.loads(schema))
@@ -113,11 +113,11 @@ class SwissdoxDataset:
 
         return True
 
-    def load_query_file(self, query_file_path):
+    def load_query_file(self, query_file_path: str):
         """
         Load and return query from query file path. Show asset message if file path does not exist.
-        :param query_file_path:
-        :return: query
+        :param str query_file_path: path to query file
+        :return: query as string
         """
         assert Path(query_file_path).is_file(), f"Query file {query_file_path} does not exist."
         with open(query_file_path, "r") as query_file:
@@ -125,11 +125,11 @@ class SwissdoxDataset:
 
         return query
 
-    def load_schema_file(self, schema_version=None):
+    def load_schema_file(self, schema_version: str = None):
         """
         Load schema file.
-        :param schema_version:
-        :return:
+        :param str schema_version: schema version as string
+        :return: schema file as text
         """
         with open(self.SCHEMA_CONFIG_PATH, "r") as schema_config:
             schema_paths = yaml.safe_load(schema_config.read())
@@ -147,11 +147,11 @@ class SwissdoxDataset:
 
         return Path(schema_path).read_text()
 
-    def initialize_from_api(self, api_client, data_root_folder):
+    def initialize_from_api(self, api_client, data_root_folder: str):
         """
         Initialize dataset from api client and store it in the data root folder.
-        :param api_client:
-        :param data_root_folder:
+        :param api_client: SwissdoxAPI client
+        :param str data_root_folder: data root folder path
         :return:
         """
         assert api_client.datasets, f"Datasets are not loaded in the client. Do that first."
@@ -170,13 +170,13 @@ class SwissdoxAPI:
         self.API_BASE_URL = "https://swissdox.linguistik.uzh.ch/api"
         self.DEFAULT_CREDENTIAL_FILE = "./swissdox-creds.env"
 
-    def set_api_credentials(self, key=None, secret=None):
+    def set_api_credentials(self, key: str = None, secret: str = None):
         """
         Set API credentials with given key and secret or loading API credentials from swissdox-creds.env file.
         The swissdox-creds.env file should be in the same directory as this file. A `SWISSDOX_KEY` variable for the key
         and a `SWISSDOX_SECRET` variable for the secret has to be set.
-        :param key:
-        :param secret:
+        :param str key: key as string
+        :param str secret: secret as string
         :return:
         """
         if (not key and not secret and Path(self.DEFAULT_CREDENTIAL_FILE).exists()):
@@ -196,7 +196,7 @@ class SwissdoxAPI:
     def create_http_header(self):
         """
         Create and return HTTP headers. This is needed to access the data from the Swissdox@LiRI API.
-        :return:
+        :return: http header object
         """
         return {
             "X-API-Key": self.api_key,
@@ -223,7 +223,7 @@ class SwissdoxAPI:
     def get_status(self, existing_dataset=None):
         """
         Get status if a given dataset already exists or not.
-        :param existing_dataset:
+        :param existing_dataset: None or existing dataset
         :return:
         """
         self.update_status()
@@ -234,11 +234,11 @@ class SwissdoxAPI:
             assert existing_dataset.dataset_name, "Please provide a valid Swissdox Dataset Object."
             return self.datasets[existing_dataset.dataset_name]
 
-    def download_dataset(self, existing_dataset, overwrite=False):
+    def download_dataset(self, existing_dataset, overwrite: bool = False):
         """
         Download dataset. You can specify if you prefer to overwrite the existing dataset.
-        :param existing_dataset:
-        :param overwrite:
+        :param existing_dataset: None or existing dataset
+        :param bool overwrite: whether to overwrite the existing .tsv files or not
         :return:
         """
         dataset_config = self.get_status(existing_dataset)
@@ -254,13 +254,13 @@ class SwissdoxAPI:
                       save_directory=os.path.join(existing_dataset.full_path, "raw-data"),
                       decompress=True)
 
-    def download(self, url, save_directory, decompress=True):
+    def download(self, url: str, save_directory: str, decompress: bool = True):
         """
         Download from URL and store the decompressed data if possible in given directory if it exists otherwise create
         specified directory first.
-        :param url:
-        :param save_directory:
-        :param decompress:
+        :param str url: download url as string
+        :param str save_directory: directory to save the downloaded data
+        :param bool decompress: whether to decompress the files or not
         :return:
         """
 
