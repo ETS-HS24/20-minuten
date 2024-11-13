@@ -101,7 +101,6 @@ if __name__ == "__main__":
         sentiment_df = FileService.read_parquet_to_df(file_name='articles_sentiment')
 
     # Embedding modeling
-    top2vec_model_path = "./models/top2vec/labse-three-year"
     if (
             not Path(top2vec_model_path).exists()
             or force_recreate
