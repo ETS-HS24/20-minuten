@@ -3,6 +3,7 @@ import pandas as pd
 import logging
 import nltk
 import spacy
+import torch
 from spacy.cli.download import download as spacy_download
 from gensim import corpora
 from gensim.models import LdaModel, LsiModel
@@ -215,7 +216,7 @@ class TopicModelingService:
             new_path = save_path.with_stem(f"{save_path.stem}-{timestamp}")
             save_path.rename(new_path)
 
-        model.save(save_path)
+        model.save(str(save_path))
         return save_path
 
     @staticmethod
@@ -255,8 +256,14 @@ class TopicModelingService:
         assert load_path.exists(), "The model path does not exist."
 
         logging.info(f"Loading {transformer_name} and top2vec from {model_path}.")
-        pretrained_model = SentenceTransformer(str(transformer_name), device="cuda")
-        model = Top2Vec.load(load_path)
+        if torch.backends.mps.is_available(): # apple chip
+            device = "mps"
+        elif torch.cuda.is_available(): # gpu
+            device = "cuda"
+        else: # cpu
+            device = "cpu"
+        pretrained_model = SentenceTransformer(str(transformer_name), device=device)
+        model = Top2Vec.load(str(load_path))
         model.set_embedding_model(pretrained_model.encode)
         
         # Mark model as loaded from disk

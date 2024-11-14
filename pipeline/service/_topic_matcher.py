@@ -12,15 +12,15 @@ class TopicMatcherService:
     @staticmethod
     def match_by_sentence_transformer(corpus, queries, number_of_top=5, match_score=0.9, invert=False):
         logger.info(f"Match by sentence transformer.")
-        if torch.cuda.is_available():
-            logger.info(f"GPU is available, setting mode to 'cuda'.")
-            mode = 'cuda'
-        else:
-            logger.warning(f"GPU NOT available, setting mode to 'cpu'.")
-            mode = 'cpu'
+        if torch.backends.mps.is_available():  # apple chip
+            device = "mps"
+        elif torch.cuda.is_available():  # gpu
+            device = "cuda"
+        else:  # cpu
+            device = "cpu"
         query_label = 'german' if invert else 'french'
         corpus_label = 'french' if invert else 'german'
-        model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2', device=mode)
+        model = SentenceTransformer('paraphrase-multilingual-mpnet-base-v2', device=device)
         hit_list = []
         result = []
         corpus_embedding = model.encode(corpus, convert_to_tensor=True, normalize_embeddings=True)
@@ -53,7 +53,7 @@ class TopicMatcherService:
             logger.info(f"Translation of tokens done.")
         except Exception as e:
             logger.error(f"Translation of tokens could not be done, see error: {e}")
-            return
+            return pd.DataFrame(columns=["german", "french"]), pd.Series(dtype=int), pd.Series(dtype=int)
         for french_translation, german_token in zip(translation, german_token_list):
             if french_translation in french_token_list:
                 matches.append((german_token, french_translation))
