@@ -1,16 +1,17 @@
 *.env
 *.tsv
 .idea
+*swissdox-creds.env
 
 #folders
 __pycache__
 .vscode
 .devcontainer
 .idea
-swissdox-creds.env
 data
 models
 papers
 Swissdox/build
 Swissdox/dist
 Swissdox/swissdox.egg-info
+
