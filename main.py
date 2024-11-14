@@ -25,7 +25,7 @@ if __name__ == "__main__":
 
     ######## Top2Vec Topic Modeling #########
     article_length_threshold = 400 # Remove documents that have fewer characters than this threshold
-    top2vec_model_path = "./models/top2vec/labse-three-year-optimized"
+    top2vec_model_path = "models/top2vec/labse-three-year-optimized"
     n_topics_per_article = 2 # Top #n topics per article that are returned
 
     # Parameters optimized via ./analysis/optimize-top2vec-model.ipynb
@@ -120,7 +120,7 @@ if __name__ == "__main__":
             or _previous_step_recreate
     ):
         top2vec_model = TopicModelingService.fit_top2vec_model(data_column=sentiment_df["content"])
-        model_path = TopicModelingService.save_top2vec_model(model=top2vec_model, model_save_path=None)
+        model_path = TopicModelingService.save_top2vec_model(model=top2vec_model, model_save_path=top2vec_model_path)
 
     else:
         logger.info(f"Not refitting the top2vec LaBSE model... loading from {top2vec_model_path}")
@@ -128,7 +128,7 @@ if __name__ == "__main__":
         
         # verify dataset between different users, speed up.
         if list(top2vec_model.document_ids) == list(range(len(sentiment_df.index))):
-            top2vec_model._loaded_from_disk = False # type:ignore -> monkeypatched in for validation
+            top2vec_model._loaded_from_disk = False # type ignore -> monkeypatched in for validation
 
     # Predict topics
     if (
@@ -136,6 +136,7 @@ if __name__ == "__main__":
             or force_recreate
             or _previous_step_recreate
     ):
+        logger.info(f"Calculating topics")
         sentiment_df["topics"] = TopicModelingService.predict_or_get_top2vec_topics(model=top2vec_model, series=sentiment_df["content"], num_topics=n_topics_per_article)
         FileService.df_to_parquet(sentiment_df, 'articles_topic')
     else:
