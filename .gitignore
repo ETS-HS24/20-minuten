@@ -11,3 +11,7 @@ __pycache__
 data
 models
 papers
+Swissdox/build
+Swissdox/dist
+Swissdox/swissdox.egg-info
+
