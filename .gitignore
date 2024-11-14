@@ -11,3 +11,6 @@ swissdox-creds.env
 data
 models
 papers
+Swissdox/build
+Swissdox/dist
+Swissdox/swissdox.egg-info
