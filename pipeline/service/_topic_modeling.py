@@ -276,8 +276,16 @@ class TopicModelingService:
         def get_topics(article:str) -> List[int]:
             topic_words, word_scores, topic_scores, topic_nums = model.query_topics(query=article, num_topics=num_topics)
             return topic_nums.tolist()
+        
+        if hasattr(model, "_loaded_from_disk"):
+            if model._loaded_from_disk:
+                model_loaded = True
+            else:
+                model_loaded = False
+        else:
+            model_loaded = False
 
-        if model._loaded_from_disk: #type: ignore
+        if model_loaded:
             # Very slow but guarantees that there is no data/prediction mismatch.
             logging.warning(f"Calculating topics because it is indicated that the model has been loaded from disk.")
             logging.warning(f"This will take some time to calculate... If you know what you are doing you can set `model._loaded_from_disk = False`")
